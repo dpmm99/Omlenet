@@ -38,13 +38,13 @@
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.viewRarestNutrientsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tmrInitializer = new System.Windows.Forms.Timer(this.components);
             this.tmrWaiter = new System.Windows.Forms.Timer(this.components);
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.progressBar1 = new System.Windows.Forms.ToolStripProgressBar();
-            this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -123,9 +123,16 @@
             // viewRarestNutrientsToolStripMenuItem
             // 
             this.viewRarestNutrientsToolStripMenuItem.Name = "viewRarestNutrientsToolStripMenuItem";
-            this.viewRarestNutrientsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.viewRarestNutrientsToolStripMenuItem.Size = new System.Drawing.Size(178, 22);
             this.viewRarestNutrientsToolStripMenuItem.Text = "View &Rarest Nutrients";
             this.viewRarestNutrientsToolStripMenuItem.Click += new System.EventHandler(this.viewRarestNutrientsToolStripMenuItem_Click);
+            // 
+            // aboutToolStripMenuItem
+            // 
+            this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(178, 22);
+            this.aboutToolStripMenuItem.Text = "&About";
+            this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
             // 
             // tmrInitializer
             // 
@@ -163,13 +170,6 @@
             this.progressBar1.Overflow = System.Windows.Forms.ToolStripItemOverflow.Never;
             this.progressBar1.Size = new System.Drawing.Size(775, 16);
             // 
-            // aboutToolStripMenuItem
-            // 
-            this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.aboutToolStripMenuItem.Text = "&About";
-            this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
-            // 
             // DockParent
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -181,7 +181,7 @@
             this.IsMdiContainer = true;
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "DockParent";
-            this.Text = "DockParent";
+            this.Text = "Omlenet";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.DockParent_FormClosing);
             this.Load += new System.EventHandler(this.DockParent_Load);
             this.Resize += new System.EventHandler(this.DockParent_Resize);

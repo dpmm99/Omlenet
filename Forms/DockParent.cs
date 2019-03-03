@@ -174,6 +174,7 @@ namespace Omlenet
 
             //TODO: Get body types from file
             targetsPanel.LoadData(nutrients, targets, targetOverrides, bodyTypes);
+            solverState = SolverState.Ready;
 
             //TODO: Error check the mappings between those files
         }

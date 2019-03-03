@@ -20,7 +20,7 @@ namespace Omlenet
         public static List<NutrientTarget> targets;
         public static List<NutrientTarget> targetOverrides = new List<NutrientTarget>();
         public static byte bodyType; //For the sake of serialization/deserialization
-        public static SolverState solverState;
+        public static SolverState solverState = SolverState.Loading;
         public static int targetFoodUnits;
 
         public enum SolverState

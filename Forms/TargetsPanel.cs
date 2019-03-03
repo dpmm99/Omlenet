@@ -7,22 +7,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using WeifenLuo.WinFormsUI.Docking;
 
 namespace Omlenet
 {
-    public partial class NutrientTargetOverrideDialog : Form
+    public partial class TargetsPanel : DockContent
     {
-        private List<Nutrient> nutrients;
-        private List<NutrientTarget> targets;
-        private List<NutrientTarget> overrides;
-        private int lastSelectedIndex = -1;
-        private bool programmedUpdate = false;
-
-        public List<NutrientTarget> GetTargetOverrides()
-        {
-            return overrides.Where(p => p.min <= p.target && p.target <= p.max).ToList();
-        }
-
         private class DisplayNutrientWithOverride
         {
             public ushort nutrientId;
@@ -35,12 +25,63 @@ namespace Omlenet
             }
         }
 
-        public NutrientTargetOverrideDialog(List<Nutrient> nutrients, List<NutrientTarget> targets, List<NutrientTarget> overrides)
+        private List<Nutrient> nutrients; //Direct reference
+        private List<NutrientTarget> targets; //Direct reference
+        private List<NutrientTarget> overrides; //Not a direct reference--we temporarily allow bad data internally, but use GetTargetOverrides to exclude it
+        private List<string> bodyTypes; //Direct reference
+        private int lastSelectedIndex = -1;
+        private bool programmedUpdate = false;
+
+        public int foodMass { get { return (int)nudFoodMass.Value; } set { nudFoodMass.Value = value; } }
+
+        public byte bodyType
+        {
+            get
+            {
+                return (byte)cboBodyType.SelectedIndex;
+            }
+
+            set
+            {
+                cboBodyType.SelectedIndex = value;
+            }
+        }
+
+        public TargetsPanel()
         {
             InitializeComponent();
+        }
+
+        public List<NutrientTarget> GetTargetOverrides()
+        {
+            return overrides.Where(p => p.min <= p.target && p.target <= p.max).ToList();
+        }
+
+        public void LoadData(List<Nutrient> nutrients, List<NutrientTarget> targets, List<NutrientTarget> overrides, List<string> bodyTypes)
+        {
             this.nutrients = nutrients;
             this.targets = targets;
             this.overrides = overrides.ToList();
+
+            lastSelectedIndex = -1;
+            pnlInputs.Hide();
+            if (this.bodyTypes == null || !this.bodyTypes.SequenceEqual(bodyTypes))
+            {
+                this.bodyTypes = bodyTypes;
+                cboBodyType.Items.Clear();
+                cboBodyType.Items.AddRange(bodyTypes.ToArray());
+                cboBodyType.SelectedIndex = 0;
+            }
+
+            lstNutrients.Items.Clear();
+            lstNutrients.Items.AddRange(nutrients.Select(p => new DisplayNutrientWithOverride
+            {
+                nutrientId = p.id,
+                name = p.name + " (" + p.unitOfMeasure + ")",
+                overridden = overrides.Any(q => q.nutrientId == p.id)
+            }).ToArray());
+
+            displayInUI();
         }
 
         private void RefreshNutrientList() //Because it won't update the strings on its own through any easier methods
@@ -52,6 +93,8 @@ namespace Omlenet
 
         private void commitFromUI()
         {
+            if (lastSelectedIndex == -1) return;
+
             var selectedNutrient = (DisplayNutrientWithOverride)lstNutrients.Items[lastSelectedIndex];
             var target = overrides.FirstOrDefault(p => p.nutrientId == selectedNutrient.nutrientId);
 
@@ -88,7 +131,7 @@ namespace Omlenet
             if (lstNutrients.SelectedIndex == -1) return;
 
             var selectedNutrient = ((DisplayNutrientWithOverride)lstNutrients.SelectedItem);
-            var target = overrides.FirstOrDefault(p => p.nutrientId == selectedNutrient.nutrientId) ?? targets.FirstOrDefault(p => p.nutrientId == selectedNutrient.nutrientId);
+            var target = overrides.FirstOrDefault(p => p.nutrientId == selectedNutrient.nutrientId) ?? targets.FirstOrDefault(p => p.bodyType == bodyType && p.nutrientId == selectedNutrient.nutrientId);
             chkOverride.Checked = selectedNutrient.overridden;
 
             nudMin.Enabled = chkOverride.Checked;
@@ -112,20 +155,10 @@ namespace Omlenet
 
             nudMin.Font = (target.min > target.target) ? new Font(nudTarget.Font, FontStyle.Strikeout) : nudTarget.Font;
             nudMax.Font = (target.target > target.max) ? new Font(nudTarget.Font, FontStyle.Strikeout) : nudTarget.Font;
-            
+
             picCost.Invalidate();
         }
-
-        private void NutrientTargetOverrideDialog_Load(object sender, EventArgs e)
-        {
-            lstNutrients.Items.AddRange(nutrients.Select(p => new DisplayNutrientWithOverride
-            {
-                nutrientId = p.id, name = p.name + " (" + p.unitOfMeasure + ")", overridden = overrides.Any(q => q.nutrientId == p.id)
-            }).ToArray());
-
-            pnlInputs.Hide();
-        }
-
+        
         private void lstNutrients_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (programmedUpdate) return;
@@ -146,9 +179,22 @@ namespace Omlenet
             programmedUpdate = false;
         }
 
-        private void btnOK_Click(object sender, EventArgs e)
+        private void TargetsPanel_Load(object sender, EventArgs e)
         {
-            DialogResult = DialogResult.OK;
+
+        }
+
+        private void cboBodyType_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            pnlInputs.Visible = (lstNutrients.SelectedIndex != -1);
+            displayInUI();
+        }
+
+        private void nud_Validating(object sender, CancelEventArgs e)
+        {
+            if (programmedUpdate) return;
+            commitFromUI();
+            displayInUI();
         }
 
         private void picCost_Paint(object sender, PaintEventArgs e)
@@ -157,7 +203,7 @@ namespace Omlenet
             {
                 var selectedNutrient = (DisplayNutrientWithOverride)lstNutrients.Items[lastSelectedIndex];
                 //Use override if set or original target if not
-                var target = overrides.FirstOrDefault(p => p.nutrientId == selectedNutrient.nutrientId) ?? targets.FirstOrDefault(p => p.nutrientId == selectedNutrient.nutrientId);
+                var target = overrides.FirstOrDefault(p => p.nutrientId == selectedNutrient.nutrientId) ?? targets.FirstOrDefault(p => p.bodyType == bodyType && p.nutrientId == selectedNutrient.nutrientId);
 
                 //Avoid exceptions for invalid data
                 if (target.min > target.target || target.target > target.max) return;
@@ -195,15 +241,8 @@ namespace Omlenet
                 //Rightmost point on the graph
                 points.Add(new PointF(maxX, yAtRight));
 
-                e.Graphics.DrawLines(Pens.Black, points.Select(p => new PointF(p.X * scaleX, p.Y * scaleY)).ToArray());
+                e.Graphics.DrawLines(Pens.Black, points.Select(p => new PointF(p.X * scaleX, picCost.Height - 1 - p.Y * scaleY)).ToArray());
             }
-        }
-
-        private void nudMin_Validating(object sender, CancelEventArgs e)
-        {
-            if (programmedUpdate) return;
-            commitFromUI();
-            displayInUI();
         }
 
         private void chkOverride_CheckedChanged(object sender, EventArgs e)
@@ -211,6 +250,12 @@ namespace Omlenet
             if (programmedUpdate) return;
             commitFromUI();
             displayInUI();
+        }
+
+        private void TargetsPanel_Resize(object sender, EventArgs e)
+        {
+            var targetHeight = this.ClientSize.Height - lstNutrients.Top;
+            if (targetHeight > 30) lstNutrients.Height = targetHeight;
         }
     }
 }

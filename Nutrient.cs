@@ -13,7 +13,6 @@ namespace Omlenet
         public ushort id;
         public string unitOfMeasure;
         public string name;
-        //TODO: Need safe minimum, safe maximum, and target for each
 
         public static Nutrient FromStream(StreamReader sr)
         {

@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("Omlenet")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Nutrition goal-based food selection utility")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Aureuscode")]
 [assembly: AssemblyProduct("Omlenet")]
-[assembly: AssemblyCopyright("Copyright ©  2019")]
+[assembly: AssemblyCopyright("Dedicated to the public domain (except licensed components)")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

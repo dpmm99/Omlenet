@@ -31,26 +31,16 @@ namespace Omlenet
         public GASolver(List<FoodDescription> foodDescs, List<NutrientTarget> targets, List<Nutrient> nutrients, List<FoodNutrient> foodNutrients, int targetFoodUnits, int targetGenerations = 75000, int populationSize = 48)
         {
             this.foodDescs = foodDescs.ToList();
-            this.targets = targets.Select(p => p.Clone()).ToList();
             this.nutrients = nutrients.ToList();
             this.foodNutrients = foodNutrients.ToList();
             this.targetFoodUnits = targetFoodUnits;
             this.targetGenerations = targetGenerations;
             this.populationSize = populationSize;
+            this.UpdateTargets(targets);
 
             //Prepare foods as a pseudo-dictionary array
             //TODO: Do this the other direction. It'll probably be a lot faster if you linearly go through the foodNutrients linearly and add them to a food lookup and convert it to an array at the end.
             foodDict = foodDescs.Select(p => foodNutrients.BinarySearch(q => q.foodId, p.id)).ToArray(); //foodNutrients are sorted by foodId.
-
-            //Targets are saved as daily values, so we'll multiply by 7 here to get weekly values
-            foreach (var range in this.targets)
-            {
-                range.min *= 7;
-                range.max *= 7;
-                range.target *= 7;
-                range.costOver /= 7;
-                range.costUnder /= 7;
-            }
         }
 
         /// <summary>
@@ -72,6 +62,7 @@ namespace Omlenet
 
             generation = 0;
             executed = true;
+            if (HasWinner) winner.score = 0; //Reset score in case the goals were changed
             worker = new Thread(GeneticAlgorithm);
             worker.Start(); //Don't do the work on the UI thread, so that the UI remains usable
         }
@@ -101,6 +92,19 @@ namespace Omlenet
             return progress;
         }
 
+        public void UpdateFoodMass(int targetFoodUnits)
+        {
+            //Pick some foods to add to/remove from the winner (if any) to meet the target food unit requirement
+            this.targetFoodUnits = targetFoodUnits;
+            if (HasWinner)
+            {
+                //Instead of assuming the old targetFoodUnits was correct, count how many foods the old winner had--it's not hard.
+                AssignFoodsGreedily(winner, targetFoodUnits - winner.foods.Sum(p => p));
+                winner.score = 0;
+                winnerChanged = true;
+            }
+        }
+
         private string GenerateChromosomeText(Chromosome c)
         {
             if (c == null) return "";
@@ -108,6 +112,7 @@ namespace Omlenet
             //Look up data for displaying
             var testOutput = new StringBuilder();
             //testOutput.AppendLine("Score: " + Math.Round(100000 / (1000 + c.score), 1) + " / 100");
+            if (c.score == 0) c.score = scoreChromosome(c); //We don't want to display 0 pointlessly
             testOutput.AppendLine("Cost: " + Math.Round(c.score));
 
             var nutrientTotals = new List<Tuple<ushort, float, string>>();
@@ -122,17 +127,18 @@ namespace Omlenet
                     {
                         var nutrient = nutrients.First(p => p.id == foodDict[x][y].nutrientId);
                         var range = targets.FirstOrDefault(p => p.nutrientId == nutrient.id);
-                        var percent = range != null && range.target != 0 ? " (" + Math.Round(foodDict[x][y].nutrientAmount * 700 / range.target, 1) + "% DV)" : "";
-                        testOutput.AppendLine("    " + nutrient.name + ": " + foodDict[x][y].nutrientAmount + nutrient.unitOfMeasure + percent);
+                        var trueNutrientAmount = c.foods[x] * foodDict[x][y].nutrientAmount;
+                        var percent = range != null && range.target != 0 ? " (" + Math.Round(trueNutrientAmount * 700 / range.target, 1) + "% DV)" : "";
+                        testOutput.AppendLine("    " + nutrient.name + ": " + trueNutrientAmount + nutrient.unitOfMeasure + percent);
 
                         var totalIdx = nutrientTotals.FindIndex(p => p.Item1 == nutrient.id);
                         if (totalIdx < 0)
                         {
-                            nutrientTotals.Add(new Tuple<ushort, float, string>(nutrient.id, foodDict[x][y].nutrientAmount, nutrient.name));
+                            nutrientTotals.Add(new Tuple<ushort, float, string>(nutrient.id, trueNutrientAmount, nutrient.name));
                         }
                         else
                         {
-                            nutrientTotals[totalIdx] = new Tuple<ushort, float, string>(nutrient.id, nutrientTotals[totalIdx].Item2 + foodDict[x][y].nutrientAmount, nutrient.name);
+                            nutrientTotals[totalIdx] = new Tuple<ushort, float, string>(nutrient.id, nutrientTotals[totalIdx].Item2 + trueNutrientAmount, nutrient.name);
                         }
                     }
                     testOutput.AppendLine();
@@ -154,7 +160,7 @@ namespace Omlenet
 
         public void SetFood(int id, int count)
         {
-            if (winner == null) winner = new Chromosome(foodDict.Length, targetFoodUnits);
+            if (winner == null) winner = new Chromosome(foodDict.Length, 0);
 
             var index = foodDescs.FindIndex(p => p.id == id);
             winner.foods[index] = count;
@@ -183,7 +189,6 @@ namespace Omlenet
                 population.Add(winner);
             }
 
-
             for (; generation < targetGenerations; generation++)
             {
 #if PARALLEL
@@ -207,7 +212,7 @@ namespace Omlenet
                     winnerChanged = true;
                 }
 
-                if (generation < targetGenerations - 1) population = BreedNewPopulation(population, 8, 100, targetFoodUnits);
+                if (generation < targetGenerations - 1) population = BreedNewPopulation(population, 8, 100, 1, targetFoodUnits);
             }
 
             //TODO: remap the data in a way that is optimized for getting a food from a nutrient (when one is lacking)
@@ -227,26 +232,45 @@ namespace Omlenet
             return c;
         }
 
+        /// <summary>
+        /// Add or remove the specified number of units of food.
+        /// This is very expensive, so it runs in full parallel.
+        /// </summary>
         private Chromosome AssignFoodsGreedily(Chromosome c, int targetFoodUnits)
         {
-            while (targetFoodUnits > 0)
+            var direction = (targetFoodUnits > 0 ? 1 : -1);
+            while (targetFoodUnits != 0)
             {
                 //Score every possible food at this step and select the one that makes it the best
                 var bestIndex = 0;
                 float bestScore = 1000000;
+
+#if PARALLEL
+                Parallel.For(0, c.foods.Length, x =>
+#else
                 for (int x = 0; x < c.foods.Length; x++)
+#endif
                 {
-                    c.foods[x]++;
+                    if (direction < 0 && c.foods[x] == 0) //Can't subtract from 0 units
+#if PARALLEL
+                        return;
+#else
+                        continue;
+#endif
+                    c.foods[x] += direction;
                     var tempScore = scoreChromosome(c);
                     if (tempScore < bestScore)
                     {
                         bestScore = tempScore;
                         bestIndex = x;
                     }
-                    c.foods[x]--;
+                    c.foods[x] -= direction;
                 }
-                c.foods[bestIndex]++;
-                targetFoodUnits--;
+#if PARALLEL
+                );
+#endif
+                c.foods[bestIndex] += direction;
+                targetFoodUnits -= direction;
             }
             return c;
         }
@@ -269,11 +293,14 @@ namespace Omlenet
         /// <param name="oldPopulation"></param>
         /// <param name="survivalRate">Number of top chromosomes to use for breeding and mutation</param>
         /// <param name="mutationChance">Tenths of a percent chance for mutation</param>
+        /// <param name="greedyChance">Tenths of a percent chance for dropping the worst and then adding the best food greedily (an expensive operation)</param>
         /// <returns></returns>
-        private List<Chromosome> BreedNewPopulation(List<Chromosome> oldPopulation, int survivalRate, int mutationChance, int targetFoodUnits)
+        private List<Chromosome> BreedNewPopulation(List<Chromosome> oldPopulation, int survivalRate, int mutationChance, int greedyChance, int targetFoodUnits)
         {
             var ret = new List<Chromosome>();
             var rnd = new Random();
+
+            greedyChance += mutationChance; //Stack probabilities on top of each other for easier randomization
 
             var nextIndex = 0;
             ret.Add(oldPopulation[0].Clone()); //The fittest one shall always survive
@@ -282,6 +309,13 @@ namespace Omlenet
                 //Reuse the top <survivalRate> chromosomes for breeding and mutating
                 var val = rnd.Next(1000);
                 if (val < mutationChance) ret.Add(new Chromosome(oldPopulation[nextIndex]));
+                else if (val < greedyChance)
+                {
+                    var c = oldPopulation[nextIndex].Clone();
+                    AssignFoodsGreedily(c, -1);
+                    AssignFoodsGreedily(c, 1);
+                    ret.Add(c);
+                }
                 else
                 {
                     var alterIndex = rnd.Next(survivalRate);
@@ -335,6 +369,21 @@ namespace Omlenet
 
             foodDescs = updatedFoodDescs;
             foodDict = foodDescs.Select(p => foodNutrients.BinarySearch(q => q.foodId, p.id)).ToArray(); //foodNutrients are sorted by foodId.
+        }
+
+        public void UpdateTargets(List<NutrientTarget> targets)
+        {
+            this.targets = targets.Select(p => p.Clone()).ToList();
+
+            //Targets are saved as daily values, so we'll multiply by 7 here to get weekly values
+            foreach (var range in this.targets)
+            {
+                range.min *= 7;
+                range.max *= 7;
+                range.target *= 7;
+                range.costOver /= 7;
+                range.costUnder /= 7;
+            }
         }
 
         /// <summary>
@@ -400,7 +449,7 @@ namespace Omlenet
             {
                 var total = foodNutrients.Where(p => p.nutrientId == target.nutrientId).Sum(p => p.nutrientAmount);
                 if (total < target.min || total > target.max) sum += 1000; //Exceeding the limits is a huge cost
-                else if (total < target.target) sum += (target.target - total) * target.costUnder; //Cost per unit differs for over or under target
+                if (total < target.target) sum += (target.target - total) * target.costUnder; //Cost per unit differs for over or under target
                 else if (total > target.target) sum += (total - target.target) * target.costOver;
             }
             return sum;
@@ -419,7 +468,7 @@ namespace Omlenet
             {
                 if (!foodNutrients.TryGetValue(target.nutrientId, out var total)) total = 0;
                 if (total < target.min || total > target.max) sum += 1000; //Exceeding the limits is a huge cost
-                else if (total < target.target) sum += (target.target - total) * target.costUnder; //Cost per unit differs for over or under target
+                if (total < target.target) sum += (target.target - total) * target.costUnder; //Cost per unit differs for over or under target
                 else if (total > target.target) sum += (total - target.target) * target.costOver;
             }
             return sum;
@@ -438,7 +487,7 @@ namespace Omlenet
             {
                 var total = foodNutrients[target.nutrientId];
                 if (total < target.min || total > target.max) sum += 1000; //Exceeding the limits is a huge cost
-                else if (total < target.target) sum += (target.target - total) * target.costUnder; //Cost per unit differs for over or under target
+                if (total < target.target) sum += (target.target - total) * target.costUnder; //Cost per unit differs for over or under target
                 else if (total > target.target) sum += (total - target.target) * target.costOver;
             }
             return sum;

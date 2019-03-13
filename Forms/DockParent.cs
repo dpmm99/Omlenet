@@ -17,6 +17,7 @@ namespace Omlenet
 {
     public partial class DockParent : Form
     {
+        private bool doNotCancel = false;
         private TargetsPanel targetsPanel;
         private FiltersPanel filtersPanel;
         private DetailsPanel detailsPanel;
@@ -28,9 +29,6 @@ namespace Omlenet
         {
             programTitle = (Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(AssemblyTitleAttribute), false).SingleOrDefault() as AssemblyTitleAttribute)?.Title;
             InitializeComponent();
-#if !DEBUG
-            //TODO: btnRareNutrients.Visible = false;
-#endif
         }
 
         private void DockParent_Load(object sender, EventArgs e)
@@ -67,6 +65,7 @@ namespace Omlenet
                 resultsPanel.CloseButtonVisible = false;
                 resultsPanel.IsHidden = false;
                 resultsPanel.Show(dockPanel1, DockState.DockRight);
+                resultsPanel.UpdateDetails = detailsPanel.UpdateDetails; //Allow the details panel to react when you select a food in the results panel, too
                 resultsPanel.FormClosing += onClosingHide;
                 resultsPanel.OnStop = () =>
                 {
@@ -76,6 +75,7 @@ namespace Omlenet
                 {
                     progressBar1.Visible = true;
                     tmrWaiter.Enabled = true;
+                    detailsPanel.LockInputs(true);
 
                     targetOverrides = targetsPanel.GetTargetOverrides();
                     targetFoodUnits = targetsPanel.foodMass;
@@ -85,10 +85,13 @@ namespace Omlenet
                 };
                 resultsPanel.OnContinue = () =>
                 {
+                    detailsPanel.LockInputs(true);
                     targetOverrides = targetsPanel.GetTargetOverrides();
                     solver.UpdateTargets(GetTrueTargets());
-                    solver.UpdateFoodList(foodDescs.Where(p => foodEnabled[p.id]).ToList());
+                    //solver.UpdateFoodList(foodDescs.Where(p => foodEnabled[p.id]).ToList());
+                    solver.UpdateFoodList(foodDescs.Where(p => foodEnabledB.Contains(p.id)).ToList());
                     solver.UpdateFoodMass(targetFoodUnits = targetsPanel.foodMass);
+                    solver.UpdateLockedFoods(foodLocked);
                     solver.Start();
                     solverState = SolverState.Running;
                     progressBar1.Visible = true;
@@ -103,6 +106,7 @@ namespace Omlenet
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            doNotCancel = true;
             Application.Exit();
         }
 
@@ -140,7 +144,9 @@ namespace Omlenet
                 filtersPanel.FilterNow();
                 targetsPanel.bodyType = bodyType;
                 targetsPanel.foodMass = targetFoodUnits;
-                resultsPanel.ResultText = solver.GetWinnerText();
+                var winner = solver.GetWinner();
+                resultsPanel.ResultText = winner.Item1;
+                resultsPanel.ResultList = winner.Item2;
 
                 if (solver.executed) solverState = SolverState.Completed;
                 else solverState = SolverState.Ready;
@@ -183,24 +189,29 @@ namespace Omlenet
         {
             //Report progress to the user at a regular rate
             progressBar1.Value = solver.GetProgress();
-            resultsPanel.ResultText = "Current best:" + Environment.NewLine + solver.GetWinnerText();
+
+            var winner = solver.GetWinner();
+            resultsPanel.ResultText = "Current best:" + Environment.NewLine + winner.Item1;
+            resultsPanel.ResultList = winner.Item2;
+
             if (progressBar1.Value == 100)
             {
-                resultsPanel.ResultText = solver.GetWinnerText();
+                resultsPanel.ResultText = winner.Item1;
 
                 progressBar1.Visible = false;
                 tmrWaiter.Enabled = false;
                 solverState = SolverState.Completed;
                 resultsPanel.UpdateUI();
-                //TODO: Re-enable UI stuff
-                //TODO: Display information about the winner in a better way
+                detailsPanel.LockInputs(false);
+                detailsPanel.UpdateDetails();
             }
         }
 
         private void viewRarestNutrientsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             var orderedNutrients = foodNutrients.GroupBy(p => p.nutrientId)
-                .Select(p => new { nutrientId = p.Key, foods = p.OrderBy(q => q.nutrientAmount).Reverse().ToList() })
+                //.Select(p => new { nutrientId = p.Key, foods = p.Where(q => foodEnabled[q.foodId]).OrderBy(q => q.nutrientAmount).Reverse().ToList() })
+                .Select(p => new { nutrientId = p.Key, foods = p.Where(q => foodEnabledB.Contains(q.foodId)).OrderBy(q => q.nutrientAmount).Reverse().ToList() })
                 .OrderBy(p => p.foods.Count).ToList();
 
             var sb = new StringBuilder();
@@ -209,7 +220,7 @@ namespace Omlenet
                 var name = nutrients.First(p => p.id == nutrient.nutrientId).name;
                 var target = targets.First(p => p.nutrientId == nutrient.nutrientId);
                 sb.Append(nutrient.nutrientId + " (" + name + ") is found in " + nutrient.foods.Count + " foods");
-                if (target.target != 0)
+                if (target.target != 0 && nutrient.foods.Count != 0)
                 {
                     var highestFraction = Math.Round(100 * nutrient.foods.First().nutrientAmount / target.target, 1);
                     var desc = foodDescs.First(p => p.id == nutrient.foods[0].foodId);
@@ -228,12 +239,25 @@ namespace Omlenet
         private void DockParent_FormClosing(object sender, FormClosingEventArgs e)
         {
             //Because it fires the MDI children's closing events first, which set cancel=true so they don't go away, set it back to false when trying to close the main window.
-            e.Cancel = false;
+            if (!doNotCancel) e.Cancel = false;
         }
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
             new AboutBox1().ShowDialog();
+        }
+
+        private void viewTopFoodsForSelectedNutrientToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var nutrientId = targetsPanel.GetIdOfSelectedNutrient();
+            var nutrient = nutrients.First(p => p.id == nutrientId);
+            //var topNutrients = foodNutrients.Where(p => p.nutrientId == nutrientId && foodEnabled[p.foodId])
+            var topNutrients = foodNutrients.Where(p => p.nutrientId == nutrientId && foodEnabledB.Contains(p.foodId))
+                .OrderByDescending(p => p.nutrientAmount).Take(30).ToList();
+            var topItems = topNutrients.Select(p => p.nutrientAmount + " - " + foodDescs.First(q => q.id == p.foodId).longDesc).ToList();
+
+            resultsPanel.ResultText = "Top sources of " + nutrient.name + " in " + nutrient.unitOfMeasure + " per 100g): " + Environment.NewLine + 
+                String.Join(Environment.NewLine, topItems);
         }
     }
 }

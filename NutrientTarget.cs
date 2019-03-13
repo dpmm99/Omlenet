@@ -12,7 +12,7 @@ namespace Omlenet
     {
         public ushort nutrientId;
         public ushort bodyType; //0 man, 1 woman, 2 pregnant, 3 child?
-        public float min, target, max; //TODO: Collect data and record sources in a separate file
+        public float min, target, max;
         public float costUnder, costOver; //Cost per unit under target and cost per unit over target
 
         public static NutrientTarget FromStream(StreamReader sr)

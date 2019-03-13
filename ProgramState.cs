@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using static Omlenet.USDAFormat;
 
@@ -13,12 +14,15 @@ namespace Omlenet
         public static string programTitle;
         public static GASolver solver;
         public static List<FoodNutrient> foodNutrients;
+        public static Dictionary<int, List<FoodNutrient>> foodNutrientDict;
         public static List<FoodGroup> foodGroups;
         public static List<FoodDescription> foodDescs;
-        public static Dictionary<int, bool> foodEnabled;
+        //public static Dictionary<int, bool> foodEnabled; //Replaced with a hash set tentatively
+        public static HashSet<int> foodEnabledB;
         public static List<Nutrient> nutrients;
         public static List<NutrientTarget> targets;
         public static List<NutrientTarget> targetOverrides = new List<NutrientTarget>();
+        public static HashSet<int> foodLocked = new HashSet<int>();
         public static byte bodyType; //For the sake of serialization/deserialization
         public static SolverState solverState = SolverState.Loading;
         public static int targetFoodUnits;
@@ -32,7 +36,7 @@ namespace Omlenet
         }
 
         private const uint MAGIC_NUMBER = 0x0b1ebe7;
-        private const ushort FILE_VERSION = 0;
+        private const ushort FILE_VERSION = 1;
         public static void SerializeInstance(BinaryWriter bw)
         {
             bw.Write(MAGIC_NUMBER);
@@ -55,8 +59,10 @@ namespace Omlenet
             bw.Write(targetFoodUnits);
 
             //Save list of disabled foods
-            bw.Write(foodEnabled.Count(p => !p.Value));
-            foreach (var f in foodEnabled.Where(p => !p.Value).Select(p => foodDescs.First(q => q.id == p.Key)))
+            //bw.Write(foodEnabled.Count(p => !p.Value));
+            bw.Write(foodDescs.Count - foodEnabledB.Count);
+            //foreach (var f in foodEnabled.Where(p => !p.Value).Select(p => foodDescs.First(q => q.id == p.Key)))
+            foreach (var f in foodDescs.Where(p => !foodEnabledB.Contains(p.id)))
             {
                 bw.Write(f.id);
             }
@@ -76,12 +82,20 @@ namespace Omlenet
                 }
             }
             else bw.Write(0);
+
+            //Save locked foods
+            bw.Write(foodLocked.Count);
+            foreach (var foodId in foodLocked)
+            {
+                bw.Write(foodId);
+            }
         }
 
         public static void DeserializeInstance(BinaryReader br)
         {
             if (br.ReadUInt32() != MAGIC_NUMBER) throw new Exception("Magic number mismatch--is this an " + programTitle + " file?");
-            if (br.ReadUInt16() > FILE_VERSION) throw new Exception("This file appears to have been created by a newer version of " + programTitle + " and cannot be loaded.");
+            var fileVersion = br.ReadUInt16();
+            if (fileVersion > FILE_VERSION) throw new Exception("This file appears to have been created by a newer version of " + programTitle + " and cannot be loaded.");
 
             bodyType = br.ReadByte();
 
@@ -104,25 +118,46 @@ namespace Omlenet
             targetFoodUnits = br.ReadInt32();
 
             //Load list of disabled foods
-            foodEnabled = foodDescs.ToDictionary(p => p.id, p => true);
+            //foodEnabled = foodDescs.ToDictionary(p => p.id, p => true);
+            foodEnabledB = new HashSet<int>(foodDescs.Select(p => p.id));
             var disabledFoodCount = br.ReadInt32();
             for (var x = 0; x < disabledFoodCount; x++)
             {
-                foodEnabled[br.ReadInt32()] = false;
+                //foodEnabled[br.ReadInt32()] = false;
+                foodEnabledB.Remove(br.ReadInt32());
             }
 
-            InitGASolver();
             //Load whether the GA has been executed
-            solver.executed = br.ReadBoolean();
+            var executed = br.ReadBoolean();
 
             //Load winner's foods
             var solverFoodCount = br.ReadInt32();
+            var foodCountsDict = new Dictionary<int, int>();
             for (var x = 0; x < solverFoodCount; x++)
             {
                 var id = br.ReadInt32();
                 var count = br.ReadInt32();
-                solver.SetFood(id, count);
+                foodCountsDict.Add(id, count);
             }
+
+            if (fileVersion > 0)
+            {
+                //Load locked foods
+                var lockedFoodCount = br.ReadInt32();
+                foodLocked = new HashSet<int>();
+                for (var x = 0; x < lockedFoodCount; x++)
+                {
+                    foodLocked.Add(br.ReadInt32());
+                }
+            }
+            else
+            {
+                foodLocked = new HashSet<int>();
+            }
+
+            InitGASolver();
+            solver.executed = executed;
+            solver.SetFoods(foodCountsDict);
         }
         
         public static List<NutrientTarget> GetTrueTargets()
@@ -134,12 +169,13 @@ namespace Omlenet
 
         public static void InitGASolver()
         {
-            var goodFoods = foodDescs.Where(p => foodEnabled[p.id]).ToList();
+            //var goodFoods = foodDescs.Where(p => foodEnabled[p.id]).ToList();
+            var goodFoods = foodDescs.Where(p => foodEnabledB.Contains(p.id)).ToList();
 
             //Use the overrides and fill in the gaps with targets for the selected body type
             var trueTargets = GetTrueTargets();
 
-            solver = new GASolver(goodFoods, trueTargets, nutrients, foodNutrients, targetFoodUnits);
+            solver = new GASolver(goodFoods, trueTargets, nutrients, foodNutrientDict, foodLocked, targetFoodUnits);
         }
 
         public static void LoadData(string path, Action<int, int> increaseLoadingProgress)
@@ -147,13 +183,39 @@ namespace Omlenet
             var lineCount = 0;
             var expectedLineCount = 7794 + 26 + 644126 + 150 + 150; //It's okay if they change a bit, but this is how many lines were in those files at the start
 
-            foodDescs = loadAsList(FoodDescription.FromStream, path + "FOOD_DES.txt", ref lineCount, expectedLineCount, increaseLoadingProgress);
-            foodGroups = loadAsList(FoodGroup.FromStream, path + "FD_GROUP.txt", ref lineCount, expectedLineCount, increaseLoadingProgress);
             foodNutrients = loadAsList(FoodNutrient.FromStream, path + "NUT_DATA.txt", ref lineCount, expectedLineCount, increaseLoadingProgress)
                 .Where(p => p.nutrientAmount != 0) //It's kinda silly that these are even included. Save a bunch of time by ignoring them (roughly 1/3 of the whole file).
                 .OrderBy(p => p.foodId).ToList();
+
+            //Turn that data into a dictionary on a separate thread for the sake of speed
+            var cpuThread = new Thread(GenerateNutrientDictionary);
+            cpuThread.Start();
+
+            foodDescs = loadAsList(FoodDescription.FromStream, path + "FOOD_DES.txt", ref lineCount, expectedLineCount, increaseLoadingProgress);
+            foodGroups = loadAsList(FoodGroup.FromStream, path + "FD_GROUP.txt", ref lineCount, expectedLineCount, increaseLoadingProgress);
             nutrients = loadAsList(Nutrient.FromStream, path + "NUTR_DEF.txt", ref lineCount, expectedLineCount, increaseLoadingProgress);
             targets = loadAsList(NutrientTarget.FromStream, path + "Targets.txt", ref lineCount, expectedLineCount, increaseLoadingProgress);
+
+            //TODO: Overwrite the USDA IDs so I can make everything into dense arrays with the index being the ID
+
+            //Wait for the dictionary to finish being generated
+            cpuThread.Join();
+        }
+
+        private static void GenerateNutrientDictionary()
+        {
+            foodNutrientDict = new Dictionary<int, List<FoodNutrient>>(10000);
+            var lastList = (List<FoodNutrient>)null;
+            var lastFoodId = -1;
+            //Basically if GroupBy assumed the IEnumerable is already grouped, this would be equivalent to foodNutrients.GroupBy(p => p.foodId).ToDictionary()
+            for (var x = 0; x < foodNutrients.Count; x++)
+            {
+                if (foodNutrients[x].foodId != lastFoodId)
+                {
+                    foodNutrientDict.Add(lastFoodId = foodNutrients[x].foodId, lastList = new List<FoodNutrient>());
+                }
+                lastList.Add(foodNutrients[x]);
+            }
         }
 
     }

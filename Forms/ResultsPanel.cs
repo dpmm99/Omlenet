@@ -14,6 +14,11 @@ namespace Omlenet
 {
     public partial class ResultsPanel : DockContent
     {
+        public Action OnStop;
+        public Action OnStart;
+        public Action OnContinue;
+        public Action<int> UpdateDetails; //Passes in a food ID
+
         public void UpdateUI()
         {
             if (solverState == SolverState.Loading)
@@ -27,16 +32,24 @@ namespace Omlenet
             btnBeginSearch.Enabled = true;
         }
 
-        public Action OnStop;
-        public Action OnStart;
-        public Action OnContinue;
-
         public ResultsPanel()
         {
             InitializeComponent();
         }
 
-        public string ResultText { get { return debugResult.Text; } set { debugResult.Text = value; } }
+        public string ResultText { get { return plainTextResults.Text; } set { plainTextResults.Text = value; } }
+
+        public List<ResultListItem> ResultList {
+            get { return lstResults.Items.Cast<ResultListItem>().ToList(); }
+            set {
+                if (ResultList.SequenceEqual(value)) return; //Don't update the UI needlessly
+
+                var selectedId = lstResults.SelectedItem != null ? ((ResultListItem)lstResults.SelectedItem).Id : -1;
+                lstResults.Items.Clear(); lstResults.Items.AddRange(value.ToArray());
+                //Restore user selection if possible
+                lstResults.SelectedItem = lstResults.Items.Cast<ResultListItem>().FirstOrDefault(p => p.Id == selectedId);
+            }
+        }
 
         private void btnBeginSearch_Click(object sender, EventArgs e)
         {
@@ -59,7 +72,33 @@ namespace Omlenet
 
         private void ResultsPanel_Resize(object sender, EventArgs e)
         {
-            debugResult.Height = this.ClientSize.Height - btnBeginSearch.Height - 3;
+            tabControl1.Height = this.ClientSize.Height - btnBeginSearch.Height - 3;
+        }
+
+        private void ResultsPanel_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void lstResults_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            UpdateDetails(((ResultListItem)lstResults.SelectedItem).Id);
+        }
+
+        string contextMenuTargetText = "";
+        private void copyToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Clipboard.Clear();
+            Clipboard.SetText(contextMenuTargetText);
+        }
+
+        private void lstResults_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                contextMenuTargetText = String.Join(Environment.NewLine, ((ListBox)sender).Items.Cast<ResultListItem>().Select(p => p.ToString()));
+                ctmReadOnlyTextMenu.Show((Control)sender, e.Location);
+            }
         }
     }
 }

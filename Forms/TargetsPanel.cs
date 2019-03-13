@@ -84,6 +84,12 @@ namespace Omlenet
             displayInUI();
         }
 
+        public int GetIdOfSelectedNutrient()
+        {
+            if (lstNutrients.SelectedIndex == -1) return 0;
+            return ((DisplayNutrientWithOverride)lstNutrients.SelectedItem).nutrientId;
+        }
+
         private void RefreshNutrientList() //Because it won't update the strings on its own through any easier methods
         {
             var wasSelected = lstNutrients.SelectedIndex;

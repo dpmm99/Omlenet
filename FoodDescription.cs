@@ -27,7 +27,6 @@ namespace Omlenet
                 longDesc = fields[2],
                 shortDesc = fields[3],
                 commonName = fields[4],
-                //TODO: Check if the last 3 or 4 fields are always the same
             };
         }
 

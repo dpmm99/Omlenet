@@ -99,6 +99,7 @@
     <Compile Include="Forms\TargetsPanel.Designer.cs">
       <DependentUpon>TargetsPanel.cs</DependentUpon>
     </Compile>
+    <Compile Include="ResultListItem.cs" />
     <Compile Include="USDAFormat.cs" />
     <EmbeddedResource Include="Forms\AboutBox1.resx">
       <DependentUpon>AboutBox1.cs</DependentUpon>

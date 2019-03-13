@@ -16,6 +16,7 @@ namespace Omlenet
     {
         private int pauseToFilter;
         public Action<int> UpdateDetails; //Passes in a food ID
+        private bool programmaticUpdate = false;
 
         public FiltersPanel()
         {
@@ -24,16 +25,20 @@ namespace Omlenet
 
         public void Ready()
         {
+            programmaticUpdate = true;
             cklFoods.Items.AddRange(foodDescs.ToArray());
-            foodEnabled = new Dictionary<int, bool>();
+            //foodEnabled = new Dictionary<int, bool>();
+            foodEnabledB = new HashSet<int>();
             for (var x = 0; x < foodDescs.Count; x++)
             {
                 cklFoods.SetItemChecked(x, true);
-                foodEnabled[foodDescs[x].id] = true;
+                //foodEnabled[foodDescs[x].id] = true;
+                foodEnabledB.Add(foodDescs[x].id);
             }
 
             cboFilterByGroup.Items.AddRange(new List<FoodGroup> { new FoodGroup { id = 0, name = "Show All" } }.Concat(foodGroups.OrderBy(p => p.name)).ToArray());
             cboFilterByGroup.SelectedIndex = 0;
+            programmaticUpdate = false;
         }
 
         public void FilterNow()
@@ -88,7 +93,7 @@ namespace Omlenet
                         //Bad words -> instant removal
                         if (badWords.Any(q => commonNameTokens.Contains(q)) || badWords.Any(q => longDescTokens.Contains(q))) return false;
 
-                        //ALL whole words have to match, NO bad words can match, and ANY ONE other word must match.
+                        //ALL whole words have to match, NO bad words can match, and ANY ONE other word must match. //TODO: The "any" thing is unintuitive and, frankly, annoying
                         okaySoFar = wholeWords.Except(commonNameTokens).Except(longDescTokens).Count() == 0;
                     }
                     return okaySoFar && query.Count == 0 || query.Any(q => p.commonName.ToLower().Contains(q)) || query.Any(q => p.longDesc.ToLower().Contains(q));
@@ -99,10 +104,13 @@ namespace Omlenet
                 cklFoods.Items.AddRange(filteredFoods);
 
                 //Set checked state of each item
+                programmaticUpdate = true;
                 for (var x = 0; x < filteredFoods.Length; x++)
                 {
-                    if (foodEnabled[filteredFoods[x].id]) cklFoods.SetItemChecked(x, true);
+                    //if (foodEnabled[filteredFoods[x].id]) cklFoods.SetItemChecked(x, true);
+                    if (foodEnabledB.Contains(filteredFoods[x].id)) cklFoods.SetItemChecked(x, true);
                 }
+                programmaticUpdate = false;
 
                 //Recover selection
                 if (wasSelected != null)
@@ -134,12 +142,18 @@ namespace Omlenet
 
         private void cklFoods_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (programmaticUpdate) return;
             UpdateDetails(((FoodDescription)cklFoods.SelectedItem).id);
         }
 
         private void cklFoods_ItemCheck(object sender, ItemCheckEventArgs e)
         {
-            foodEnabled[(cklFoods.Items[e.Index] as FoodDescription).id] = (e.NewValue == CheckState.Checked);
+            if (programmaticUpdate) return;
+            var foodId = (cklFoods.Items[e.Index] as FoodDescription).id;
+            //foodEnabled[foodId] = (e.NewValue == CheckState.Checked);
+            if (e.NewValue == CheckState.Checked) foodEnabledB.Add(foodId);
+            else foodEnabledB.Remove(foodId);
+            UpdateDetails(foodId);
         }
 
         private void btnCheckShown_Click(object sender, EventArgs e)
@@ -150,7 +164,8 @@ namespace Omlenet
                 while (cklFoods.CheckedIndices.Count != 0)
                 {
                     var idx = cklFoods.CheckedIndices[0];
-                    foodEnabled[(cklFoods.Items[idx] as FoodDescription).id] = false;
+                    //foodEnabled[(cklFoods.Items[idx] as FoodDescription).id] = false;
+                    foodEnabledB.Remove((cklFoods.Items[idx] as FoodDescription).id);
                     cklFoods.SetItemChecked(idx, false);
                 }
             }
@@ -160,7 +175,8 @@ namespace Omlenet
                 for (var x = 0; x < cklFoods.Items.Count; x++)
                 {
                     cklFoods.SetItemChecked(x, true);
-                    foodEnabled[(cklFoods.Items[x] as FoodDescription).id] = true;
+                    //foodEnabled[(cklFoods.Items[x] as FoodDescription).id] = true;
+                    foodEnabledB.Add((cklFoods.Items[x] as FoodDescription).id);
                 }
             }
         }

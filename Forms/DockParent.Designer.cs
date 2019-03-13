@@ -45,6 +45,7 @@
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.progressBar1 = new System.Windows.Forms.ToolStripProgressBar();
+            this.viewTopFoodsForSelectedNutrientToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -115,6 +116,7 @@
             // 
             this.helpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.viewRarestNutrientsToolStripMenuItem,
+            this.viewTopFoodsForSelectedNutrientToolStripMenuItem,
             this.aboutToolStripMenuItem});
             this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
             this.helpToolStripMenuItem.Size = new System.Drawing.Size(40, 20);
@@ -123,14 +125,14 @@
             // viewRarestNutrientsToolStripMenuItem
             // 
             this.viewRarestNutrientsToolStripMenuItem.Name = "viewRarestNutrientsToolStripMenuItem";
-            this.viewRarestNutrientsToolStripMenuItem.Size = new System.Drawing.Size(178, 22);
+            this.viewRarestNutrientsToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.viewRarestNutrientsToolStripMenuItem.Text = "View &Rarest Nutrients";
             this.viewRarestNutrientsToolStripMenuItem.Click += new System.EventHandler(this.viewRarestNutrientsToolStripMenuItem_Click);
             // 
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(178, 22);
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.aboutToolStripMenuItem.Text = "&About";
             this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
             // 
@@ -169,6 +171,13 @@
             this.progressBar1.Name = "progressBar1";
             this.progressBar1.Overflow = System.Windows.Forms.ToolStripItemOverflow.Never;
             this.progressBar1.Size = new System.Drawing.Size(775, 16);
+            // 
+            // viewTopFoodsForSelectedNutrientToolStripMenuItem
+            // 
+            this.viewTopFoodsForSelectedNutrientToolStripMenuItem.Name = "viewTopFoodsForSelectedNutrientToolStripMenuItem";
+            this.viewTopFoodsForSelectedNutrientToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.viewTopFoodsForSelectedNutrientToolStripMenuItem.Text = "View &Top Foods for Selected Nutrient";
+            this.viewTopFoodsForSelectedNutrientToolStripMenuItem.Click += new System.EventHandler(this.viewTopFoodsForSelectedNutrientToolStripMenuItem_Click);
             // 
             // DockParent
             // 
@@ -212,5 +221,6 @@
         private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem viewRarestNutrientsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem viewTopFoodsForSelectedNutrientToolStripMenuItem;
     }
 }

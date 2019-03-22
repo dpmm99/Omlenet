@@ -75,6 +75,7 @@ namespace Omlenet
                     dataGridView1.Visible = false;
                     return;
                 }
+                dataGridView1.Visible = true;
 
                 var foods = solver.GetWinningFoods();
                 foreach (var food in foods)
@@ -104,6 +105,7 @@ namespace Omlenet
                     dataGridView1.Visible = false;
                     return;
                 }
+                dataGridView1.Visible = true;
 
                 var foodDetails = foodNutrientDict[displayedFoodItem.id];
                 foreach (var nutrient in foodDetails.Where(p => p.nutrientAmount * count != 0))

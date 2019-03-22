@@ -52,8 +52,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Benchmarker.cs" />
     <Compile Include="BinarySearchExtension.cs" />
     <Compile Include="Chromosome.cs" />
+    <Compile Include="DataGridViewContextMenu.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Forms\AboutBox1.cs">
       <SubType>Form</SubType>
     </Compile>

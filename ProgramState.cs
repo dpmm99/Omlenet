@@ -17,8 +17,7 @@ namespace Omlenet
         public static Dictionary<int, List<FoodNutrient>> foodNutrientDict;
         public static List<FoodGroup> foodGroups;
         public static List<FoodDescription> foodDescs;
-        //public static Dictionary<int, bool> foodEnabled; //Replaced with a hash set tentatively
-        public static HashSet<int> foodEnabledB;
+        public static HashSet<int> foodEnabled;
         public static List<Nutrient> nutrients;
         public static List<NutrientTarget> targets;
         public static List<NutrientTarget> targetOverrides = new List<NutrientTarget>();
@@ -48,7 +47,7 @@ namespace Omlenet
             bw.Write(targetOverrides.Count);
             foreach (var o in targetOverrides)
             {
-                bw.Write(o.nutrientId);
+                bw.Write(nutrientInternalIdToUsdaIdMapping[o.nutrientId]); //Remap to USDA nutrient IDs for saving
                 bw.Write(o.min);
                 bw.Write(o.target);
                 bw.Write(o.max);
@@ -59,10 +58,8 @@ namespace Omlenet
             bw.Write(targetFoodUnits);
 
             //Save list of disabled foods
-            //bw.Write(foodEnabled.Count(p => !p.Value));
-            bw.Write(foodDescs.Count - foodEnabledB.Count);
-            //foreach (var f in foodEnabled.Where(p => !p.Value).Select(p => foodDescs.First(q => q.id == p.Key)))
-            foreach (var f in foodDescs.Where(p => !foodEnabledB.Contains(p.id)))
+            bw.Write(foodDescs.Count - foodEnabled.Count);
+            foreach (var f in foodDescs.Where(p => !foodEnabled.Contains(p.id)))
             {
                 bw.Write(f.id);
             }
@@ -106,7 +103,7 @@ namespace Omlenet
             {
                 targetOverrides.Add(new NutrientTarget
                 {
-                    nutrientId = br.ReadUInt16(),
+                    nutrientId = nutrientUsdaIdToInternalIdMapping[br.ReadUInt16()], //Remap from USDA to internal ID
                     min = br.ReadSingle(),
                     target = br.ReadSingle(),
                     max = br.ReadSingle(),
@@ -118,13 +115,11 @@ namespace Omlenet
             targetFoodUnits = br.ReadInt32();
 
             //Load list of disabled foods
-            //foodEnabled = foodDescs.ToDictionary(p => p.id, p => true);
-            foodEnabledB = new HashSet<int>(foodDescs.Select(p => p.id));
+            foodEnabled = new HashSet<int>(foodDescs.Select(p => p.id));
             var disabledFoodCount = br.ReadInt32();
             for (var x = 0; x < disabledFoodCount; x++)
             {
-                //foodEnabled[br.ReadInt32()] = false;
-                foodEnabledB.Remove(br.ReadInt32());
+                foodEnabled.Remove(br.ReadInt32());
             }
 
             //Load whether the GA has been executed
@@ -169,13 +164,33 @@ namespace Omlenet
 
         public static void InitGASolver()
         {
-            //var goodFoods = foodDescs.Where(p => foodEnabled[p.id]).ToList();
-            var goodFoods = foodDescs.Where(p => foodEnabledB.Contains(p.id)).ToList();
+            var goodFoods = foodDescs.Where(p => foodEnabled.Contains(p.id)).ToList();
 
             //Use the overrides and fill in the gaps with targets for the selected body type
             var trueTargets = GetTrueTargets();
 
             solver = new GASolver(goodFoods, trueTargets, nutrients, foodNutrientDict, foodLocked, targetFoodUnits);
+        }
+
+        private static ushort[] nutrientUsdaIdToInternalIdMapping;
+        private static ushort[] nutrientInternalIdToUsdaIdMapping;
+        private static void RemapNutrientIDs() //Affects the speed of scoring by something like 2.5%
+        {
+            //Need to modify foodNutrients, nutrients, and targets.
+            //First, generate a mapping (both ways because we may as well save with the USDA IDs)
+            nutrientUsdaIdToInternalIdMapping = new ushort[nutrients.Max(p => p.id) + 1];
+            nutrientInternalIdToUsdaIdMapping = new ushort[nutrients.Count];
+            for (ushort x = 0; x < nutrients.Count; x++)
+            {
+                nutrientUsdaIdToInternalIdMapping[nutrients[x].id] = x;
+                nutrientInternalIdToUsdaIdMapping[x] = nutrients[x].id;
+            }
+
+            //Then switch out all the new IDs
+            foreach (var fn in foodNutrients) fn.nutrientId = nutrientUsdaIdToInternalIdMapping[fn.nutrientId];
+            foreach (var t in targets) t.nutrientId = nutrientUsdaIdToInternalIdMapping[t.nutrientId];
+            foreach (var n in nutrients) n.id = nutrientUsdaIdToInternalIdMapping[n.id];
+            //The foodNutrientDict is already remapped because it's the same objects as foodNutrients
         }
 
         public static void LoadData(string path, Action<int, int> increaseLoadingProgress)
@@ -196,7 +211,8 @@ namespace Omlenet
             nutrients = loadAsList(Nutrient.FromStream, path + "NUTR_DEF.txt", ref lineCount, expectedLineCount, increaseLoadingProgress);
             targets = loadAsList(NutrientTarget.FromStream, path + "Targets.txt", ref lineCount, expectedLineCount, increaseLoadingProgress);
 
-            //TODO: Overwrite the USDA IDs so I can make everything into dense arrays with the index being the ID
+            //Overwrite the USDA IDs so I can make everything into dense arrays with the index being the ID
+            RemapNutrientIDs();
 
             //Wait for the dictionary to finish being generated
             cpuThread.Join();

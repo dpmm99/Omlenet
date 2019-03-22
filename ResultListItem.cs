@@ -10,7 +10,8 @@ namespace Omlenet
     {
         public string Name;
         public int Id;
-        public int Mass;
+        public float Mass;
+        public float Cost;
 
         public override string ToString()
         {
@@ -25,7 +26,7 @@ namespace Omlenet
 
         public override int GetHashCode()
         {
-            return Id * 10000 + Mass;
+            return Id * 100000 + (int)(Mass * 10);
         }
     }
 }

@@ -38,6 +38,7 @@
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.viewRarestNutrientsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.viewTopFoodsForSelectedNutrientToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tmrInitializer = new System.Windows.Forms.Timer(this.components);
             this.tmrWaiter = new System.Windows.Forms.Timer(this.components);
@@ -45,7 +46,6 @@
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.progressBar1 = new System.Windows.Forms.ToolStripProgressBar();
-            this.viewTopFoodsForSelectedNutrientToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -85,30 +85,32 @@
             // 
             // openToolStripMenuItem
             // 
+            this.openToolStripMenuItem.Enabled = false;
             this.openToolStripMenuItem.Name = "openToolStripMenuItem";
             this.openToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
-            this.openToolStripMenuItem.Size = new System.Drawing.Size(151, 22);
+            this.openToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.openToolStripMenuItem.Text = "&Open";
             this.openToolStripMenuItem.Click += new System.EventHandler(this.openToolStripMenuItem_Click);
             // 
             // saveAsToolStripMenuItem
             // 
+            this.saveAsToolStripMenuItem.Enabled = false;
             this.saveAsToolStripMenuItem.Name = "saveAsToolStripMenuItem";
             this.saveAsToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
-            this.saveAsToolStripMenuItem.Size = new System.Drawing.Size(151, 22);
+            this.saveAsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.saveAsToolStripMenuItem.Text = "&Save As";
             this.saveAsToolStripMenuItem.Click += new System.EventHandler(this.saveAsToolStripMenuItem_Click);
             // 
             // toolStripMenuItem1
             // 
             this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(148, 6);
+            this.toolStripMenuItem1.Size = new System.Drawing.Size(177, 6);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
             this.exitToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F4)));
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(151, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.exitToolStripMenuItem.Text = "E&xit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
@@ -124,10 +126,19 @@
             // 
             // viewRarestNutrientsToolStripMenuItem
             // 
+            this.viewRarestNutrientsToolStripMenuItem.Enabled = false;
             this.viewRarestNutrientsToolStripMenuItem.Name = "viewRarestNutrientsToolStripMenuItem";
             this.viewRarestNutrientsToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.viewRarestNutrientsToolStripMenuItem.Text = "View &Rarest Nutrients";
             this.viewRarestNutrientsToolStripMenuItem.Click += new System.EventHandler(this.viewRarestNutrientsToolStripMenuItem_Click);
+            // 
+            // viewTopFoodsForSelectedNutrientToolStripMenuItem
+            // 
+            this.viewTopFoodsForSelectedNutrientToolStripMenuItem.Enabled = false;
+            this.viewTopFoodsForSelectedNutrientToolStripMenuItem.Name = "viewTopFoodsForSelectedNutrientToolStripMenuItem";
+            this.viewTopFoodsForSelectedNutrientToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.viewTopFoodsForSelectedNutrientToolStripMenuItem.Text = "View &Top Foods for Selected Nutrient";
+            this.viewTopFoodsForSelectedNutrientToolStripMenuItem.Click += new System.EventHandler(this.viewTopFoodsForSelectedNutrientToolStripMenuItem_Click);
             // 
             // aboutToolStripMenuItem
             // 
@@ -171,13 +182,6 @@
             this.progressBar1.Name = "progressBar1";
             this.progressBar1.Overflow = System.Windows.Forms.ToolStripItemOverflow.Never;
             this.progressBar1.Size = new System.Drawing.Size(775, 16);
-            // 
-            // viewTopFoodsForSelectedNutrientToolStripMenuItem
-            // 
-            this.viewTopFoodsForSelectedNutrientToolStripMenuItem.Name = "viewTopFoodsForSelectedNutrientToolStripMenuItem";
-            this.viewTopFoodsForSelectedNutrientToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
-            this.viewTopFoodsForSelectedNutrientToolStripMenuItem.Text = "View &Top Foods for Selected Nutrient";
-            this.viewTopFoodsForSelectedNutrientToolStripMenuItem.Click += new System.EventHandler(this.viewTopFoodsForSelectedNutrientToolStripMenuItem_Click);
             // 
             // DockParent
             // 

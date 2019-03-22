@@ -15,6 +15,7 @@ namespace Omlenet
     public partial class DetailsPanel : DockContent
     {
         private FoodDescription displayedFoodItem;
+        private Nutrient displayedNutrient;
 
         public DetailsPanel()
         {
@@ -26,11 +27,25 @@ namespace Omlenet
 
         }
 
-        public void UpdateDetails(int foodId = -1)
+        public void DisplayNutrient(ushort nutrientId)
         {
+            displayedNutrient = nutrients.FirstOrDefault(p => p.id == nutrientId);
+            displayedFoodItem = null;
+            chkLock.Visible = nudUnitsInPlan.Visible = label1.Visible = false;
+            lblFoodDetail.Text = "Nutrient details:" + Environment.NewLine +
+                "Name: " + displayedNutrient.name + Environment.NewLine +
+                "Unit of measure: " + displayedNutrient.unitOfMeasure;
+
+            UpdateTable();
+        }
+
+        public void DisplayFood(int foodId = -1)
+        {
+            displayedNutrient = null;
             if (foodId != -1) displayedFoodItem = foodDescs.FirstOrDefault(p => p.id == foodId);
             if (displayedFoodItem == null)
             {
+                lblFoodDetail.Text = "Nothing selected";
                 chkLock.Visible = nudUnitsInPlan.Visible = label1.Visible = false;
                 return;
             }
@@ -39,8 +54,7 @@ namespace Omlenet
                 "Group: " + foodGroups.First(p => p.id == displayedFoodItem.foodGroupId); //TODO: Add tags and stuff to foods
 
             //Only show the fields that link to the winning chromosome if this food is enabled
-            //chkLock.Visible = nudUnitsInPlan.Visible = label1.Visible = foodEnabled[displayedFoodItem.id] && solver != null;
-            chkLock.Visible = nudUnitsInPlan.Visible = label1.Visible = foodEnabledB.Contains(displayedFoodItem.id) && solver != null;
+            chkLock.Visible = nudUnitsInPlan.Visible = label1.Visible = foodEnabled.Contains(displayedFoodItem.id) && solver != null;
 
             int count = 0;
             if (solver != null && solver.HasWinner) solver.GetWinningFoods().TryGetValue(displayedFoodItem.id, out count);
@@ -49,31 +63,68 @@ namespace Omlenet
             UpdateTable();
         }
 
-        private void UpdateTable() //TODO: Make the table grow with DetailsPanel and move the NumericUpDown and checkbox
+        private void UpdateTable()
         {
-            var count = (int)nudUnitsInPlan.Value;
-            //Hide the table if the food isn't in the chromosome
-            if (count == 0)
-            {
-                dataGridView1.Visible = false;
-                return;
-            }
-
-            var foodDetails = foodNutrientDict[displayedFoodItem.id];
             var oldScroll = dataGridView1.FirstDisplayedScrollingRowIndex;
             dataGridView1.Rows.Clear();
-            foreach (var nutrient in foodDetails.Where(p => p.nutrientAmount * count != 0))
+
+            if (displayedNutrient != null) //Details of a nutrient include a table of foods in the current winner that contain this nutrient
             {
-                var nutrientMeta = nutrients.First(p => p.id == nutrient.nutrientId);
-                var nutrientAmount = (nutrient.nutrientAmount * count);
-                var nutrientCost = (solver != null && solver.HasWinner ? solver.CalculateNutrientCostDifference(nutrient.nutrientId, nutrientAmount) : 0);
-                dataGridView1.Rows.Add(new object[] {
-                    nutrient.nutrientId,
-                    nutrientMeta.name,
-                    nutrientAmount + nutrientMeta.unitOfMeasure,
-                    Math.Round(nutrientCost, 1)
-                });
+                if (solver == null || !solver.HasWinner)
+                {
+                    dataGridView1.Visible = false;
+                    return;
+                }
+
+                var foods = solver.GetWinningFoods();
+                foreach (var food in foods)
+                {
+                    var details = foodNutrientDict[food.Key];
+                    var nutrientAmount = details.FirstOrDefault(p => p.nutrientId == displayedNutrient.id)?.nutrientAmount;
+                    if (nutrientAmount == null) continue;
+                    //Multiply by the count of this food item
+                    nutrientAmount *= food.Value;
+
+                    var foodNutrientCost = solver.CalculateNutrientCostDifference(displayedNutrient.id, nutrientAmount.Value);
+                    dataGridView1.Rows.Add(new object[] {
+                        food.Key,
+                        foodDescs.First(p => p.id == food.Key).longDesc,
+                        nutrientAmount,
+                        Math.Round(foodNutrientCost, 1)
+                    });
+                }
+                if (dataGridView1.SortedColumn != null) dataGridView1.Sort(dataGridView1.SortedColumn, (dataGridView1.SortOrder == SortOrder.Descending ? ListSortDirection.Descending : ListSortDirection.Ascending));
             }
+            else if (displayedFoodItem != null) //Details of a food include a table of nutrients that the current winner contains because of this food
+            {
+                var count = (int)nudUnitsInPlan.Value;
+                //Hide the table if the food isn't in the chromosome
+                if (count == 0)
+                {
+                    dataGridView1.Visible = false;
+                    return;
+                }
+
+                var foodDetails = foodNutrientDict[displayedFoodItem.id];
+                foreach (var nutrient in foodDetails.Where(p => p.nutrientAmount * count != 0))
+                {
+                    var nutrientMeta = nutrients.First(p => p.id == nutrient.nutrientId);
+                    var nutrientAmount = (nutrient.nutrientAmount * count);
+                    var nutrientCost = (solver != null && solver.HasWinner ? solver.CalculateNutrientCostDifference(nutrient.nutrientId, nutrientAmount) : 0);
+                    dataGridView1.Rows.Add(new object[] {
+                        nutrient.nutrientId,
+                        nutrientMeta.name,
+                        nutrientAmount + nutrientMeta.unitOfMeasure,
+                        Math.Round(nutrientCost, 1)
+                    });
+                }
+                if (dataGridView1.SortedColumn != null) dataGridView1.Sort(dataGridView1.SortedColumn, (dataGridView1.SortOrder == SortOrder.Descending ? ListSortDirection.Descending : ListSortDirection.Ascending));
+            }
+            else
+            {
+                dataGridView1.Visible = false;
+            }
+
             //Restore scroll
             if (oldScroll < dataGridView1.RowCount && oldScroll > -1) dataGridView1.FirstDisplayedScrollingRowIndex = oldScroll;
         }
@@ -109,6 +160,28 @@ namespace Omlenet
         {
             chkLock.Enabled = !locked;
             nudUnitsInPlan.Enabled = !locked;
+        }
+
+        private void dataGridView1_CellMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+                ctmDgvCopyMenu.Show(sender as DataGridView, e.ColumnIndex, e.RowIndex, e.Location);
+        }
+
+        private void DetailsPanel_Resize(object sender, EventArgs e)
+        {
+            if (this.Width > 333)
+            {
+                dataGridView1.Width = pnlFoodDetail.Width - SystemInformation.VerticalScrollBarWidth - 6;
+                dataGridView1.Columns[1].Width = dataGridView1.Width - 175;
+            }
+            if (this.Height > 354)
+            {
+                dataGridView1.Height = pnlFoodDetail.Height - dataGridView1.Top - 58;
+                nudUnitsInPlan.Top = dataGridView1.Bottom + 6;
+                chkLock.Top = nudUnitsInPlan.Top + 3;
+                label1.Top = nudUnitsInPlan.Top + 4;
+            }
         }
     }
 }

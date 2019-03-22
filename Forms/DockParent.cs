@@ -38,8 +38,11 @@ namespace Omlenet
             {
                 FormClosingEventHandler onClosingHide = (a, b) =>
                 {
-                    b.Cancel = true;
-                    ((DockContent)a).DockState = DockState.DockTop;
+                    if (!doNotCancel)
+                    {
+                        b.Cancel = true;
+                        ((DockContent)a).DockState = DockState.DockTop;
+                    }
                 };
 
                 targetsPanel = new TargetsPanel();
@@ -58,14 +61,15 @@ namespace Omlenet
                 filtersPanel.CloseButtonVisible = false;
                 filtersPanel.IsHidden = false;
                 filtersPanel.Show(dockPanel1, DockState.Document);
-                filtersPanel.UpdateDetails = detailsPanel.UpdateDetails; //Allow the details panel to react when you select a food in the filters panel
+                filtersPanel.UpdateDetails = detailsPanel.DisplayFood; //Allow the details panel to react when you select a food in the filters panel
                 filtersPanel.FormClosing += onClosingHide;
 
                 resultsPanel = new ResultsPanel();
                 resultsPanel.CloseButtonVisible = false;
                 resultsPanel.IsHidden = false;
                 resultsPanel.Show(dockPanel1, DockState.DockRight);
-                resultsPanel.UpdateDetails = detailsPanel.UpdateDetails; //Allow the details panel to react when you select a food in the results panel, too
+                resultsPanel.DisplayFood = detailsPanel.DisplayFood; //Allow the details panel to react when you select a food in the results panel, too
+                resultsPanel.DisplayNutrient = detailsPanel.DisplayNutrient; //Also let it react when you select a nutrient
                 resultsPanel.FormClosing += onClosingHide;
                 resultsPanel.OnStop = () =>
                 {
@@ -88,8 +92,7 @@ namespace Omlenet
                     detailsPanel.LockInputs(true);
                     targetOverrides = targetsPanel.GetTargetOverrides();
                     solver.UpdateTargets(GetTrueTargets());
-                    //solver.UpdateFoodList(foodDescs.Where(p => foodEnabled[p.id]).ToList());
-                    solver.UpdateFoodList(foodDescs.Where(p => foodEnabledB.Contains(p.id)).ToList());
+                    solver.UpdateFoodList(foodDescs.Where(p => foodEnabled.Contains(p.id)).ToList());
                     solver.UpdateFoodMass(targetFoodUnits = targetsPanel.foodMass);
                     solver.UpdateLockedFoods(foodLocked);
                     solver.Start();
@@ -144,9 +147,13 @@ namespace Omlenet
                 filtersPanel.FilterNow();
                 targetsPanel.bodyType = bodyType;
                 targetsPanel.foodMass = targetFoodUnits;
-                var winner = solver.GetWinner();
-                resultsPanel.ResultText = winner.Item1;
-                resultsPanel.ResultList = winner.Item2;
+                var winner = solver.GetWinner(out var changed);
+                if (winner != null)
+                {
+                    resultsPanel.ResultText = winner.Item1;
+                    resultsPanel.FoodList = winner.Item2;
+                    resultsPanel.NutrientList = winner.Item3;
+                }
 
                 if (solver.executed) solverState = SolverState.Completed;
                 else solverState = SolverState.Ready;
@@ -175,6 +182,11 @@ namespace Omlenet
             resultsPanel.Enabled = true;
             targetsPanel.Enabled = true;
             filtersPanel.Enabled = true;
+            viewRarestNutrientsToolStripMenuItem.Enabled = true;
+            viewTopFoodsForSelectedNutrientToolStripMenuItem.Enabled = true;
+            openToolStripMenuItem.Enabled = true;
+            saveAsToolStripMenuItem.Enabled = true;
+
 
             filtersPanel.Ready();
 
@@ -190,28 +202,30 @@ namespace Omlenet
             //Report progress to the user at a regular rate
             progressBar1.Value = solver.GetProgress();
 
-            var winner = solver.GetWinner();
-            resultsPanel.ResultText = "Current best:" + Environment.NewLine + winner.Item1;
-            resultsPanel.ResultList = winner.Item2;
+            var changed = false;
+            var winner = solver.GetWinner(out changed);
+            if (winner != null && changed)
+            {
+                resultsPanel.ResultText = winner.Item1;
+                resultsPanel.FoodList = winner.Item2;
+                resultsPanel.NutrientList = winner.Item3;
+            }
 
             if (progressBar1.Value == 100)
             {
-                resultsPanel.ResultText = winner.Item1;
-
                 progressBar1.Visible = false;
                 tmrWaiter.Enabled = false;
                 solverState = SolverState.Completed;
                 resultsPanel.UpdateUI();
                 detailsPanel.LockInputs(false);
-                detailsPanel.UpdateDetails();
+                detailsPanel.DisplayFood();
             }
         }
 
         private void viewRarestNutrientsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             var orderedNutrients = foodNutrients.GroupBy(p => p.nutrientId)
-                //.Select(p => new { nutrientId = p.Key, foods = p.Where(q => foodEnabled[q.foodId]).OrderBy(q => q.nutrientAmount).Reverse().ToList() })
-                .Select(p => new { nutrientId = p.Key, foods = p.Where(q => foodEnabledB.Contains(q.foodId)).OrderBy(q => q.nutrientAmount).Reverse().ToList() })
+                .Select(p => new { nutrientId = p.Key, foods = p.Where(q => foodEnabled.Contains(q.foodId)).OrderBy(q => q.nutrientAmount).Reverse().ToList() })
                 .OrderBy(p => p.foods.Count).ToList();
 
             var sb = new StringBuilder();
@@ -240,6 +254,7 @@ namespace Omlenet
         {
             //Because it fires the MDI children's closing events first, which set cancel=true so they don't go away, set it back to false when trying to close the main window.
             if (!doNotCancel) e.Cancel = false;
+            if (solver != null) solver.Stop();
         }
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
@@ -251,8 +266,7 @@ namespace Omlenet
         {
             var nutrientId = targetsPanel.GetIdOfSelectedNutrient();
             var nutrient = nutrients.First(p => p.id == nutrientId);
-            //var topNutrients = foodNutrients.Where(p => p.nutrientId == nutrientId && foodEnabled[p.foodId])
-            var topNutrients = foodNutrients.Where(p => p.nutrientId == nutrientId && foodEnabledB.Contains(p.foodId))
+            var topNutrients = foodNutrients.Where(p => p.nutrientId == nutrientId && foodEnabled.Contains(p.foodId))
                 .OrderByDescending(p => p.nutrientAmount).Take(30).ToList();
             var topItems = topNutrients.Select(p => p.nutrientAmount + " - " + foodDescs.First(q => q.id == p.foodId).longDesc).ToList();
 

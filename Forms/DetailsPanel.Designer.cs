@@ -30,21 +30,22 @@
         {
             this.components = new System.ComponentModel.Container();
             this.pnlFoodDetail = new System.Windows.Forms.Panel();
-            this.lblFoodDetail = new System.Windows.Forms.Label();
-            this.ctmReadOnlyTextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.copyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.nudUnitsInPlan = new System.Windows.Forms.NumericUpDown();
-            this.chkLock = new System.Windows.Forms.CheckBox();
+            this.label1 = new System.Windows.Forms.Label();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.ID = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.NName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Mass = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Cost = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.label1 = new System.Windows.Forms.Label();
+            this.chkLock = new System.Windows.Forms.CheckBox();
+            this.nudUnitsInPlan = new System.Windows.Forms.NumericUpDown();
+            this.lblFoodDetail = new System.Windows.Forms.Label();
+            this.ctmReadOnlyTextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.copyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.ctmDgvCopyMenu = new Omlenet.DataGridViewContextMenu(this.components);
             this.pnlFoodDetail.SuspendLayout();
-            this.ctmReadOnlyTextMenu.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.nudUnitsInPlan)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nudUnitsInPlan)).BeginInit();
+            this.ctmReadOnlyTextMenu.SuspendLayout();
             this.SuspendLayout();
             // 
             // pnlFoodDetail
@@ -58,56 +59,24 @@
             this.pnlFoodDetail.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnlFoodDetail.Location = new System.Drawing.Point(0, 0);
             this.pnlFoodDetail.Name = "pnlFoodDetail";
-            this.pnlFoodDetail.Size = new System.Drawing.Size(190, 341);
+            this.pnlFoodDetail.Size = new System.Drawing.Size(360, 327);
             this.pnlFoodDetail.TabIndex = 10;
             // 
-            // lblFoodDetail
+            // label1
             // 
-            this.lblFoodDetail.AutoSize = true;
-            this.lblFoodDetail.Location = new System.Drawing.Point(12, 10);
-            this.lblFoodDetail.Name = "lblFoodDetail";
-            this.lblFoodDetail.Size = new System.Drawing.Size(67, 13);
-            this.lblFoodDetail.TabIndex = 0;
-            this.lblFoodDetail.Text = "Food details:";
-            this.lblFoodDetail.MouseDown += new System.Windows.Forms.MouseEventHandler(this.lblFoodDetail_MouseDown);
-            // 
-            // ctmReadOnlyTextMenu
-            // 
-            this.ctmReadOnlyTextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.copyToolStripMenuItem});
-            this.ctmReadOnlyTextMenu.Name = "ctmReadOnlyTextMenu";
-            this.ctmReadOnlyTextMenu.Size = new System.Drawing.Size(100, 26);
-            // 
-            // copyToolStripMenuItem
-            // 
-            this.copyToolStripMenuItem.Name = "copyToolStripMenuItem";
-            this.copyToolStripMenuItem.Size = new System.Drawing.Size(99, 22);
-            this.copyToolStripMenuItem.Text = "&Copy";
-            this.copyToolStripMenuItem.Click += new System.EventHandler(this.copyToolStripMenuItem_Click);
-            // 
-            // nudUnitsInPlan
-            // 
-            this.nudUnitsInPlan.Location = new System.Drawing.Point(126, 302);
-            this.nudUnitsInPlan.Name = "nudUnitsInPlan";
-            this.nudUnitsInPlan.Size = new System.Drawing.Size(60, 20);
-            this.nudUnitsInPlan.TabIndex = 11;
-            this.nudUnitsInPlan.Validating += new System.ComponentModel.CancelEventHandler(this.nudUnitsInPlan_Validating);
-            // 
-            // chkLock
-            // 
-            this.chkLock.AutoSize = true;
-            this.chkLock.Location = new System.Drawing.Point(192, 305);
-            this.chkLock.Name = "chkLock";
-            this.chkLock.Size = new System.Drawing.Size(50, 17);
-            this.chkLock.TabIndex = 12;
-            this.chkLock.Text = "Lock";
-            this.chkLock.UseVisualStyleBackColor = true;
-            this.chkLock.Click += new System.EventHandler(this.chkLock_Click);
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(3, 306);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(118, 13);
+            this.label1.TabIndex = 14;
+            this.label1.Text = "Amount in plan (x100g):";
             // 
             // dataGridView1
             // 
             this.dataGridView1.AllowUserToAddRows = false;
             this.dataGridView1.AllowUserToDeleteRows = false;
+            this.dataGridView1.AllowUserToResizeColumns = false;
+            this.dataGridView1.AllowUserToResizeRows = false;
             this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.ID,
@@ -120,6 +89,7 @@
             this.dataGridView1.RowHeadersVisible = false;
             this.dataGridView1.Size = new System.Drawing.Size(333, 202);
             this.dataGridView1.TabIndex = 13;
+            this.dataGridView1.CellMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.dataGridView1_CellMouseClick);
             // 
             // ID
             // 
@@ -149,29 +119,69 @@
             this.Cost.ReadOnly = true;
             this.Cost.Width = 45;
             // 
-            // label1
+            // chkLock
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(3, 306);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(118, 13);
-            this.label1.TabIndex = 14;
-            this.label1.Text = "Amount in plan (x100g):";
+            this.chkLock.AutoSize = true;
+            this.chkLock.Location = new System.Drawing.Point(192, 305);
+            this.chkLock.Name = "chkLock";
+            this.chkLock.Size = new System.Drawing.Size(50, 17);
+            this.chkLock.TabIndex = 12;
+            this.chkLock.Text = "Lock";
+            this.chkLock.UseVisualStyleBackColor = true;
+            this.chkLock.Click += new System.EventHandler(this.chkLock_Click);
+            // 
+            // nudUnitsInPlan
+            // 
+            this.nudUnitsInPlan.Location = new System.Drawing.Point(126, 302);
+            this.nudUnitsInPlan.Name = "nudUnitsInPlan";
+            this.nudUnitsInPlan.Size = new System.Drawing.Size(60, 20);
+            this.nudUnitsInPlan.TabIndex = 11;
+            this.nudUnitsInPlan.Validating += new System.ComponentModel.CancelEventHandler(this.nudUnitsInPlan_Validating);
+            // 
+            // lblFoodDetail
+            // 
+            this.lblFoodDetail.AutoSize = true;
+            this.lblFoodDetail.Location = new System.Drawing.Point(12, 10);
+            this.lblFoodDetail.Name = "lblFoodDetail";
+            this.lblFoodDetail.Size = new System.Drawing.Size(67, 13);
+            this.lblFoodDetail.TabIndex = 0;
+            this.lblFoodDetail.Text = "Food details:";
+            this.lblFoodDetail.MouseDown += new System.Windows.Forms.MouseEventHandler(this.lblFoodDetail_MouseDown);
+            // 
+            // ctmReadOnlyTextMenu
+            // 
+            this.ctmReadOnlyTextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.copyToolStripMenuItem});
+            this.ctmReadOnlyTextMenu.Name = "ctmReadOnlyTextMenu";
+            this.ctmReadOnlyTextMenu.Size = new System.Drawing.Size(100, 26);
+            // 
+            // copyToolStripMenuItem
+            // 
+            this.copyToolStripMenuItem.Name = "copyToolStripMenuItem";
+            this.copyToolStripMenuItem.Size = new System.Drawing.Size(99, 22);
+            this.copyToolStripMenuItem.Text = "&Copy";
+            this.copyToolStripMenuItem.Click += new System.EventHandler(this.copyToolStripMenuItem_Click);
+            // 
+            // ctmDgvCopyMenu
+            // 
+            this.ctmDgvCopyMenu.Name = "ctmReadOnlyTextMenu";
+            this.ctmDgvCopyMenu.Size = new System.Drawing.Size(138, 92);
             // 
             // DetailsPanel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(190, 341);
+            this.ClientSize = new System.Drawing.Size(360, 327);
             this.Controls.Add(this.pnlFoodDetail);
             this.Name = "DetailsPanel";
             this.Text = "Information";
             this.Load += new System.EventHandler(this.DetailsPanel_Load);
+            this.Resize += new System.EventHandler(this.DetailsPanel_Resize);
             this.pnlFoodDetail.ResumeLayout(false);
             this.pnlFoodDetail.PerformLayout();
-            this.ctmReadOnlyTextMenu.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.nudUnitsInPlan)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nudUnitsInPlan)).EndInit();
+            this.ctmReadOnlyTextMenu.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -190,5 +200,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn NName;
         private System.Windows.Forms.DataGridViewTextBoxColumn Mass;
         private System.Windows.Forms.DataGridViewTextBoxColumn Cost;
+        private DataGridViewContextMenu ctmDgvCopyMenu;
     }
 }

@@ -16,6 +16,7 @@ namespace Omlenet
     {
         private FoodDescription displayedFoodItem;
         private Nutrient displayedNutrient;
+        public Action OnEditWinner;
 
         public DetailsPanel()
         {
@@ -149,6 +150,7 @@ namespace Omlenet
             if (displayedFoodItem == null || solver == null) return;
             solver.SetFood(displayedFoodItem.id, (int)nudUnitsInPlan.Value);
             UpdateTable();
+            OnEditWinner();
         }
 
         private void chkLock_Click(object sender, EventArgs e)

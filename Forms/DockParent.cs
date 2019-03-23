@@ -56,6 +56,7 @@ namespace Omlenet
                 detailsPanel.IsHidden = false;
                 detailsPanel.Show(dockPanel1, DockState.DockBottom);
                 detailsPanel.FormClosing += onClosingHide;
+                detailsPanel.OnEditWinner = UpdateWinner;
 
                 filtersPanel = new FiltersPanel();
                 filtersPanel.CloseButtonVisible = false;
@@ -100,6 +101,14 @@ namespace Omlenet
                     progressBar1.Visible = true;
                     tmrWaiter.Enabled = true;
                 };
+                resultsPanel.OnReset = () => {
+                    if (MessageBox.Show("Reset the results? You will lose your current result food list, other than locked foods, if you have not saved it.", "Omlenet Result Reset", MessageBoxButtons.OKCancel) == DialogResult.OK)
+                    {
+                        InitGASolver();
+                        solverState = SolverState.Ready;
+                        UpdateWinner();
+                    }
+                };
             }
             catch
             {
@@ -109,6 +118,8 @@ namespace Omlenet
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            //TODO: "Do you want to save first?"
+
             doNotCancel = true;
             Application.Exit();
         }
@@ -147,13 +158,7 @@ namespace Omlenet
                 filtersPanel.FilterNow();
                 targetsPanel.bodyType = bodyType;
                 targetsPanel.foodMass = targetFoodUnits;
-                var winner = solver.GetWinner(out var changed);
-                if (winner != null)
-                {
-                    resultsPanel.ResultText = winner.Item1;
-                    resultsPanel.FoodList = winner.Item2;
-                    resultsPanel.NutrientList = winner.Item3;
-                }
+                UpdateWinner();
 
                 if (solver.executed) solverState = SolverState.Completed;
                 else solverState = SolverState.Ready;
@@ -197,19 +202,23 @@ namespace Omlenet
             //TODO: Error check the mappings between those files
         }
 
-        private void tmrWaiter_Tick(object sender, EventArgs e)
+        private void UpdateWinner()
         {
-            //Report progress to the user at a regular rate
-            progressBar1.Value = solver.GetProgress();
-
-            var changed = false;
-            var winner = solver.GetWinner(out changed);
+            var winner = solver.GetWinner(out var changed);
             if (winner != null && changed)
             {
                 resultsPanel.ResultText = winner.Item1;
                 resultsPanel.FoodList = winner.Item2;
                 resultsPanel.NutrientList = winner.Item3;
             }
+        }
+
+        private void tmrWaiter_Tick(object sender, EventArgs e)
+        {
+            //Report progress to the user at a regular rate
+            progressBar1.Value = solver.GetProgress();
+
+            UpdateWinner();
 
             if (progressBar1.Value == 100)
             {
@@ -228,6 +237,7 @@ namespace Omlenet
                 .Select(p => new { nutrientId = p.Key, foods = p.Where(q => foodEnabled.Contains(q.foodId)).OrderBy(q => q.nutrientAmount).Reverse().ToList() })
                 .OrderBy(p => p.foods.Count).ToList();
 
+            //TODO: Generate ResultListItems and stick them into the results panel and show that tab
             var sb = new StringBuilder();
             foreach (var nutrient in orderedNutrients)
             {
@@ -270,6 +280,7 @@ namespace Omlenet
                 .OrderByDescending(p => p.nutrientAmount).Take(30).ToList();
             var topItems = topNutrients.Select(p => p.nutrientAmount + " - " + foodDescs.First(q => q.id == p.foodId).longDesc).ToList();
 
+            //TODO: Generate ResultListItems and stick them into the results panel and show that tab
             resultsPanel.ResultText = "Top sources of " + nutrient.name + " in " + nutrient.unitOfMeasure + " per 100g): " + Environment.NewLine + 
                 String.Join(Environment.NewLine, topItems);
         }

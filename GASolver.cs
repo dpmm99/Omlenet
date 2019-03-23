@@ -174,7 +174,11 @@ namespace Omlenet
             foodLocked.RemoveWhere(p => !lockedFoodCounts.ContainsKey(p) && !foodDescs.Any(q => q.id == p));
 
             //lockedFoodCounts -- if an item is already present in there, leave it alone. If one is present and needs removed, move its count into winner
-            if (!HasWinner) winner = new Chromosome(foodDescs.Count, targetFoodUnits); //Because if any food is locked with a count, we need a place to put it when unlocking
+            if (!HasWinner)
+            {
+                winner = new Chromosome(foodDescs.Count, targetFoodUnits); //Because if any food is locked with a count, we need a place to put it when unlocking
+                winnerChanged = true;
+            }
             var keys = lockedFoodCounts.Select(p => p.Key).ToList();
             foreach (var foodId in keys)
             {
@@ -212,6 +216,7 @@ namespace Omlenet
                     //Update lockedFoodDescs and foodDescs
                     lockedFoodDescs.Add(foodDescs[idx]);
                     foodDescs.RemoveAt(idx);
+                    if (count != 0) winnerChanged = true;
                 }
             }
 
@@ -349,6 +354,7 @@ namespace Omlenet
             var foodUnitsBeingSet = foodCountsById.Sum(p => p.Value);
             //Make a random chromosome (the count may not be correct here since some are being overwritten by the passed-in amounts)
             winner = new Chromosome(nutrientsByChromosomeIndex.Length, targetFoodUnits - foodUnitsBeingSet);
+            winnerChanged = true;
 
             var atLeastOneLockedFood = false;
             foreach (var food in foodCountsById)
@@ -360,6 +366,7 @@ namespace Omlenet
                 else
                 {
                     var index = foodDescs.FindIndex(p => p.id == food.Key);
+                    if (index == -1) continue; //Only happens if you disable a food and then save without continuing the search.
                     winner.foods[index] = food.Value;
                 }
             }
@@ -370,6 +377,7 @@ namespace Omlenet
         //For use in immediate response to user input (which therefore has to be locked while the GA is running)
         public void SetFood(int id, int count)
         {
+            winnerChanged = true;
             if (winner == null) winner = new Chromosome(nutrientsByChromosomeIndex.Length, targetFoodUnits);
 
             if (lockedFoodCounts.ContainsKey(id))

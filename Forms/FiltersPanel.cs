@@ -95,7 +95,7 @@ namespace Omlenet
                         okaySoFar = wholeWords.Except(commonNameTokens).Except(longDescTokens).Count() == 0;
                     }
                     var subquery = query.Where(q => !p.longDesc.ToLower().Contains(q));
-                    return okaySoFar && !subquery.Any() || subquery.All(q => p.commonName.ToLower().Contains(q));
+                    return okaySoFar && (!subquery.Any() || subquery.All(q => p.commonName.ToLower().Contains(q)));
                 }).ToArray(); //TODO: Maybe allow filtering with more things like nutrients
 
                 var wasSelected = cklFoods.SelectedIndex != -1 ? (cklFoods.SelectedItem as FoodDescription) : null;

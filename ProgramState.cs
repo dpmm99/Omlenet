@@ -191,6 +191,8 @@ namespace Omlenet
             foreach (var t in targets) t.nutrientId = nutrientUsdaIdToInternalIdMapping[t.nutrientId];
             foreach (var n in nutrients) n.id = nutrientUsdaIdToInternalIdMapping[n.id];
             //The foodNutrientDict is already remapped because it's the same objects as foodNutrients
+
+            //TODO: All the displays that show nutrient IDs are now showing the internal IDs. Is that acceptable? Do I even need them to show in the first place?
         }
 
         public static void LoadData(string path, Action<int, int> increaseLoadingProgress)

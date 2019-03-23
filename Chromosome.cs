@@ -29,7 +29,6 @@ namespace Omlenet
                 var x = rnd.Next(foodCount);
                 foods[x]++;
             }
-            //TODO: May try building a decent meal plan with high-nutrient foods for a starting point.
         }
 
         public Chromosome(Chromosome toMutate)
@@ -40,7 +39,7 @@ namespace Omlenet
             var toRedistribute = 0;
             for (var x = 0; x < foods.Length; x++)
             {
-                if (foods[x] > 0 && rnd.Next(100) < 30) //% chance
+                if (foods[x] > 0 && rnd.Next(100) < 30) //% chance //TODO: Try reducing the chance significantly--mutation is pretty catastrophic as-is.
                 {
                     toRedistribute += foods[x];
                     foods[x] = 0;
@@ -78,6 +77,7 @@ namespace Omlenet
                     foods[x] += taking;
                     targetFoodUnits -= taking;
                 }
+                if (targetFoodUnits > 0 && x == ma.foods.Length - 1) x = -1; //Make sure you always end with enough foods
             }
         }
 

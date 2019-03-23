@@ -34,19 +34,25 @@
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.tabPage2 = new System.Windows.Forms.TabPage();
-            this.lstResults = new System.Windows.Forms.ListBox();
+            this.dgvFoods = new System.Windows.Forms.DataGridView();
+            this.dataGridViewTextBoxColumn1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewTextBoxColumn2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewTextBoxColumn3 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewTextBoxColumn4 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.tabPage3 = new System.Windows.Forms.TabPage();
             this.dgvNutrients = new System.Windows.Forms.DataGridView();
-            this.ctmReadOnlyTextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.copyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ID = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.NName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Mass = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Cost = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.ctmDgvCopyMenu = new DataGridViewContextMenu(this.components);
+            this.ctmReadOnlyTextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.copyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.ctmDgvCopyMenu = new Omlenet.DataGridViewContextMenu(this.components);
+            this.btnReset = new System.Windows.Forms.Button();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
             this.tabPage2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvFoods)).BeginInit();
             this.tabPage3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvNutrients)).BeginInit();
             this.ctmReadOnlyTextMenu.SuspendLayout();
@@ -98,7 +104,7 @@
             // 
             // tabPage2
             // 
-            this.tabPage2.Controls.Add(this.lstResults);
+            this.tabPage2.Controls.Add(this.dgvFoods);
             this.tabPage2.Location = new System.Drawing.Point(4, 22);
             this.tabPage2.Name = "tabPage2";
             this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
@@ -107,16 +113,54 @@
             this.tabPage2.Text = "Food List";
             this.tabPage2.UseVisualStyleBackColor = true;
             // 
-            // lstResults
+            // dgvFoods
             // 
-            this.lstResults.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lstResults.FormattingEnabled = true;
-            this.lstResults.Location = new System.Drawing.Point(3, 3);
-            this.lstResults.Name = "lstResults";
-            this.lstResults.Size = new System.Drawing.Size(187, 352);
-            this.lstResults.TabIndex = 0;
-            this.lstResults.SelectedIndexChanged += new System.EventHandler(this.lstResults_SelectedIndexChanged);
-            this.lstResults.MouseDown += new System.Windows.Forms.MouseEventHandler(this.lstResults_MouseDown);
+            this.dgvFoods.AllowUserToAddRows = false;
+            this.dgvFoods.AllowUserToDeleteRows = false;
+            this.dgvFoods.AllowUserToResizeColumns = false;
+            this.dgvFoods.AllowUserToResizeRows = false;
+            this.dgvFoods.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dgvFoods.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.dataGridViewTextBoxColumn1,
+            this.dataGridViewTextBoxColumn2,
+            this.dataGridViewTextBoxColumn3,
+            this.dataGridViewTextBoxColumn4});
+            this.dgvFoods.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.dgvFoods.Location = new System.Drawing.Point(3, 3);
+            this.dgvFoods.Name = "dgvFoods";
+            this.dgvFoods.ReadOnly = true;
+            this.dgvFoods.RowHeadersVisible = false;
+            this.dgvFoods.Size = new System.Drawing.Size(187, 352);
+            this.dgvFoods.TabIndex = 15;
+            this.dgvFoods.CellMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.dgvFoods_CellMouseClick);
+            // 
+            // dataGridViewTextBoxColumn1
+            // 
+            this.dataGridViewTextBoxColumn1.HeaderText = "ID";
+            this.dataGridViewTextBoxColumn1.Name = "dataGridViewTextBoxColumn1";
+            this.dataGridViewTextBoxColumn1.ReadOnly = true;
+            this.dataGridViewTextBoxColumn1.Width = 50;
+            // 
+            // dataGridViewTextBoxColumn2
+            // 
+            this.dataGridViewTextBoxColumn2.HeaderText = "Name";
+            this.dataGridViewTextBoxColumn2.Name = "dataGridViewTextBoxColumn2";
+            this.dataGridViewTextBoxColumn2.ReadOnly = true;
+            this.dataGridViewTextBoxColumn2.Width = 175;
+            // 
+            // dataGridViewTextBoxColumn3
+            // 
+            this.dataGridViewTextBoxColumn3.HeaderText = "Mass";
+            this.dataGridViewTextBoxColumn3.Name = "dataGridViewTextBoxColumn3";
+            this.dataGridViewTextBoxColumn3.ReadOnly = true;
+            this.dataGridViewTextBoxColumn3.Width = 60;
+            // 
+            // dataGridViewTextBoxColumn4
+            // 
+            this.dataGridViewTextBoxColumn4.HeaderText = "Cost";
+            this.dataGridViewTextBoxColumn4.Name = "dataGridViewTextBoxColumn4";
+            this.dataGridViewTextBoxColumn4.ReadOnly = true;
+            this.dataGridViewTextBoxColumn4.Width = 55;
             // 
             // tabPage3
             // 
@@ -149,20 +193,6 @@
             this.dgvNutrients.TabIndex = 14;
             this.dgvNutrients.CellMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.dgvNutrients_CellMouseClick);
             // 
-            // ctmReadOnlyTextMenu
-            // 
-            this.ctmReadOnlyTextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.copyToolStripMenuItem});
-            this.ctmReadOnlyTextMenu.Name = "ctmReadOnlyTextMenu";
-            this.ctmReadOnlyTextMenu.Size = new System.Drawing.Size(100, 26);
-            // 
-            // copyToolStripMenuItem
-            // 
-            this.copyToolStripMenuItem.Name = "copyToolStripMenuItem";
-            this.copyToolStripMenuItem.Size = new System.Drawing.Size(99, 22);
-            this.copyToolStripMenuItem.Text = "&Copy";
-            this.copyToolStripMenuItem.Click += new System.EventHandler(this.copyToolStripMenuItem_Click);
-            // 
             // ID
             // 
             this.ID.HeaderText = "ID";
@@ -191,11 +221,43 @@
             this.Cost.ReadOnly = true;
             this.Cost.Width = 55;
             // 
+            // ctmReadOnlyTextMenu
+            // 
+            this.ctmReadOnlyTextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.copyToolStripMenuItem});
+            this.ctmReadOnlyTextMenu.Name = "ctmReadOnlyTextMenu";
+            this.ctmReadOnlyTextMenu.Size = new System.Drawing.Size(100, 26);
+            // 
+            // copyToolStripMenuItem
+            // 
+            this.copyToolStripMenuItem.Name = "copyToolStripMenuItem";
+            this.copyToolStripMenuItem.Size = new System.Drawing.Size(99, 22);
+            this.copyToolStripMenuItem.Text = "&Copy";
+            this.copyToolStripMenuItem.Click += new System.EventHandler(this.copyToolStripMenuItem_Click);
+            // 
+            // ctmDgvCopyMenu
+            // 
+            this.ctmDgvCopyMenu.Name = "ctmReadOnlyTextMenu";
+            this.ctmDgvCopyMenu.Size = new System.Drawing.Size(138, 92);
+            // 
+            // btnReset
+            // 
+            this.btnReset.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnReset.Enabled = false;
+            this.btnReset.Location = new System.Drawing.Point(4, 2);
+            this.btnReset.Name = "btnReset";
+            this.btnReset.Size = new System.Drawing.Size(91, 23);
+            this.btnReset.TabIndex = 10;
+            this.btnReset.Text = "Reset";
+            this.btnReset.UseVisualStyleBackColor = true;
+            this.btnReset.Click += new System.EventHandler(this.btnReset_Click);
+            // 
             // ResultsPanel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(201, 415);
+            this.Controls.Add(this.btnReset);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.btnBeginSearch);
             this.Name = "ResultsPanel";
@@ -206,6 +268,7 @@
             this.tabPage1.ResumeLayout(false);
             this.tabPage1.PerformLayout();
             this.tabPage2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.dgvFoods)).EndInit();
             this.tabPage3.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dgvNutrients)).EndInit();
             this.ctmReadOnlyTextMenu.ResumeLayout(false);
@@ -220,7 +283,6 @@
         private System.Windows.Forms.TabControl tabControl1;
         private System.Windows.Forms.TabPage tabPage1;
         private System.Windows.Forms.TabPage tabPage2;
-        private System.Windows.Forms.ListBox lstResults;
         private System.Windows.Forms.ContextMenuStrip ctmReadOnlyTextMenu;
         private System.Windows.Forms.ToolStripMenuItem copyToolStripMenuItem;
         private System.Windows.Forms.TabPage tabPage3;
@@ -230,5 +292,11 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn Mass;
         private System.Windows.Forms.DataGridViewTextBoxColumn Cost;
         private DataGridViewContextMenu ctmDgvCopyMenu;
+        private System.Windows.Forms.DataGridView dgvFoods;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn1;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn2;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn3;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn4;
+        private System.Windows.Forms.Button btnReset;
     }
 }

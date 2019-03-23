@@ -94,8 +94,8 @@ namespace Omlenet
                     targetOverrides = targetsPanel.GetTargetOverrides();
                     solver.UpdateTargets(GetTrueTargets());
                     solver.UpdateFoodList(foodDescs.Where(p => foodEnabled.Contains(p.id)).ToList());
-                    solver.UpdateFoodMass(targetFoodUnits = targetsPanel.foodMass);
                     solver.UpdateLockedFoods(foodLocked);
+                    solver.UpdateFoodMass(targetFoodUnits = targetsPanel.foodMass);
                     solver.Start();
                     solverState = SolverState.Running;
                     progressBar1.Visible = true;

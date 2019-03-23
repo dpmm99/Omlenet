@@ -154,8 +154,12 @@ namespace Omlenet
             this.targetFoodUnits = targetFoodUnits;
             if (HasWinner)
             {
-                //Instead of assuming the old targetFoodUnits was correct, count how many foods the old winner had--it's not hard.
-                AssignFoodsGreedily(winner, targetFoodUnits - winner.foods.Sum(p => p));
+                targetFoodUnits -= lockedFoodCounts.Sum(p => p.Value);
+                if (winner.foods.Length != 0 && targetFoodUnits >= 0) //Prevent errors if all foods are locked, no foods are enabled, or there are too many food units locked in already
+                {
+                    //Instead of assuming the old targetFoodUnits was correct, count how many foods the old winner had--it's not hard.
+                    AssignFoodsGreedily(winner, targetFoodUnits - winner.foods.Sum(p => p));
+                }
                 winner.score = 0;
                 winnerChanged = true;
             }
@@ -418,6 +422,7 @@ namespace Omlenet
         {
             //Temporarily remove the locked foods from the within-chromosome total food mass
             targetFoodUnits -= lockedFoodCounts.Sum(p => p.Value);
+            targetFoodUnits = Math.Max(targetFoodUnits, 0); //Just to avoid a crash if the user locks more foods in than there are available for the week
 
             var population = GeneratePopulation(populationSize, nutrientsByChromosomeIndex.Length, targetFoodUnits);
             if (winner != null) //If continuing from an existing result, include the old winner
@@ -426,9 +431,15 @@ namespace Omlenet
                 population.Add(winner);
 
                 //Make sure winner has the right total food mass (in case the user changed food amounts with SetFood)
-                var diff = targetFoodUnits - winner.foods.Sum(p => p);
-                AssignFoodsGreedily(winner, diff);
+                if (winner.foods.Length != 0 && targetFoodUnits > 0) //Prevent errors if all foods are locked, no foods are enabled, or there are too many food units locked in already
+                {
+                    var diff = targetFoodUnits - winner.foods.Sum(p => p);
+                    AssignFoodsGreedily(winner, diff);
+                } else if (targetFoodUnits <= 0) winner.foods = new int[winner.foods.Length]; //Zero them all out if there's no room for the GA to do any work
             }
+
+            //In case someone (like me) locks all the foods in the list, don't just crash.
+            if (targetFoodUnits <= 0 || nutrientsByChromosomeIndex.Length == 0) generation = targetGenerations - 1;
 
             for (; generation < targetGenerations; generation++)
             {

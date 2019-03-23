@@ -31,6 +31,7 @@ namespace Omlenet
         private List<string> bodyTypes; //Direct reference
         private int lastSelectedIndex = -1;
         private bool programmedUpdate = false;
+        private List<NumericUpDown> nuds; //NumericUpDown controls except for the target total food mass one
 
         public int foodMass { get { return (int)nudFoodMass.Value; } set { nudFoodMass.Value = value; } }
 
@@ -50,6 +51,7 @@ namespace Omlenet
         public TargetsPanel()
         {
             InitializeComponent();
+            nuds = new List<NumericUpDown>() { nudCostOver, nudCostUnder, nudMax, nudMin, nudTarget };
         }
 
         public List<NutrientTarget> GetTargetOverrides()
@@ -140,12 +142,6 @@ namespace Omlenet
             var target = overrides.FirstOrDefault(p => p.nutrientId == selectedNutrient.nutrientId) ?? targets.FirstOrDefault(p => p.bodyType == bodyType && p.nutrientId == selectedNutrient.nutrientId);
             chkOverride.Checked = selectedNutrient.overridden;
 
-            nudMin.Enabled = chkOverride.Checked;
-            nudTarget.Enabled = chkOverride.Checked;
-            nudMax.Enabled = chkOverride.Checked;
-            nudCostOver.Enabled = chkOverride.Checked;
-            nudCostUnder.Enabled = chkOverride.Checked;
-
             nudMin.Value = (decimal)target.min;
             nudTarget.Value = (decimal)target.target;
             nudMax.Value = (decimal)target.max;
@@ -153,11 +149,13 @@ namespace Omlenet
             nudCostOver.Value = (decimal)target.costOver;
 
             //Make the arrow buttons multiplicative by 1% instead of additive so they work better for nutrients with different ranges
-            nudMin.Increment = nudMin.Value * 0.01M;
-            nudTarget.Increment = nudTarget.Value * 0.01M;
-            nudMax.Increment = nudMax.Value * 0.01M;
-            nudCostUnder.Increment = nudCostUnder.Value * 0.01M;
-            nudCostOver.Increment = nudCostOver.Value * 0.01M;
+            foreach (var nud in nuds)
+            {
+                nud.Enabled = chkOverride.Checked;
+                nud.Increment = nud.Value * 0.01M;
+                if (nud.Increment < 0.001M) nud.Increment = 0.001M;
+            }
+
 
             nudMin.Font = (target.min > target.target) ? new Font(nudTarget.Font, FontStyle.Strikeout) : nudTarget.Font;
             nudMax.Font = (target.target > target.max) ? new Font(nudTarget.Font, FontStyle.Strikeout) : nudTarget.Font;
@@ -217,7 +215,7 @@ namespace Omlenet
                 var baseline = picCost.Height / 2;
                 var minX = (float)0.95 * target.min;
                 var maxX = (float)Math.Min(2 * target.target, 1.05 * target.max);
-                var scaleX = (float)picCost.Width / (maxX - minX);
+                var scaleX = (float)picCost.Width / (float)Math.Max(maxX - minX, 0.0001); //Max to avoid division by zero errors that permanently render the picture box broken
 
                 var yAtLeft = (target.target - minX) * target.costUnder;
                 if (target.min > minX) yAtLeft += 100;
@@ -226,7 +224,7 @@ namespace Omlenet
 
                 var maxY = (float)Math.Max(yAtLeft, yAtRight);
                 var minY = (float)0;
-                var scaleY = (float)picCost.Height / (maxY - minY);
+                var scaleY = (float)picCost.Height / (float)Math.Max(maxY - minY, 0.0001);
 
                 var points = new List<PointF>();
                 //Leftmost point on the graph (score must be <= the score at the minimum threshold)

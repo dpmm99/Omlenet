@@ -37,7 +37,7 @@ namespace Omlenet
         public bool executed;
         public bool HasWinner { get { return winner != null; } }
 
-        public GASolver(List<FoodDescription> foodDescs, List<NutrientTarget> targets, List<Nutrient> nutrients, Dictionary<int, List<FoodNutrient>> foodNutrientsDict, HashSet<int> lockedFoods, int targetFoodUnits, int targetGenerations = 75000, int populationSize = 48)
+        public GASolver(List<FoodDescription> foodDescs, List<NutrientTarget> targets, List<Nutrient> nutrients, Dictionary<int, List<FoodNutrient>> foodNutrientsDict, HashSet<int> lockedFoods, int targetFoodUnits, int targetGenerations = 750000, int populationSize = 48)
         {
             this.nutrientsByFoodId = foodNutrientsDict;
             this.foodDescs = foodDescs.ToList();
@@ -180,7 +180,7 @@ namespace Omlenet
             //lockedFoodCounts -- if an item is already present in there, leave it alone. If one is present and needs removed, move its count into winner
             if (!HasWinner)
             {
-                winner = new Chromosome(foodDescs.Count, targetFoodUnits); //Because if any food is locked with a count, we need a place to put it when unlocking
+                winner = new Chromosome(foodDescs.Count, targetFoodUnits, new Random()); //Because if any food is locked with a count, we need a place to put it when unlocking
                 winnerChanged = true;
             }
             var keys = lockedFoodCounts.Select(p => p.Key).ToList();
@@ -357,7 +357,7 @@ namespace Omlenet
         {
             var foodUnitsBeingSet = foodCountsById.Sum(p => p.Value);
             //Make a random chromosome (the count may not be correct here since some are being overwritten by the passed-in amounts)
-            winner = new Chromosome(nutrientsByChromosomeIndex.Length, targetFoodUnits - foodUnitsBeingSet);
+            winner = new Chromosome(nutrientsByChromosomeIndex.Length, targetFoodUnits - foodUnitsBeingSet, new Random());
             winnerChanged = true;
 
             var atLeastOneLockedFood = false;
@@ -382,7 +382,7 @@ namespace Omlenet
         public void SetFood(int id, int count)
         {
             winnerChanged = true;
-            if (winner == null) winner = new Chromosome(nutrientsByChromosomeIndex.Length, targetFoodUnits);
+            if (winner == null) winner = new Chromosome(nutrientsByChromosomeIndex.Length, targetFoodUnits, new Random());
 
             if (lockedFoodCounts.ContainsKey(id))
             {
@@ -423,8 +423,9 @@ namespace Omlenet
             //Temporarily remove the locked foods from the within-chromosome total food mass
             targetFoodUnits -= lockedFoodCounts.Sum(p => p.Value);
             targetFoodUnits = Math.Max(targetFoodUnits, 0); //Just to avoid a crash if the user locks more foods in than there are available for the week
+            var rnd = new Random();
 
-            var population = GeneratePopulation(populationSize, nutrientsByChromosomeIndex.Length, targetFoodUnits);
+            var population = GeneratePopulation(populationSize, nutrientsByChromosomeIndex.Length, targetFoodUnits, rnd);
             if (winner != null) //If continuing from an existing result, include the old winner
             {
                 population.RemoveAt(population.Count - 1);
@@ -441,6 +442,7 @@ namespace Omlenet
             //In case someone (like me) locks all the foods in the list, don't just crash.
             if (targetFoodUnits <= 0 || nutrientsByChromosomeIndex.Length == 0) generation = targetGenerations - 1;
 
+            var lastImprovement = generation; 
             for (; generation < targetGenerations; generation++)
             {
 #if PARALLEL
@@ -462,16 +464,41 @@ namespace Omlenet
 #endif
                 population = population.OrderBy(p => p.score).ToList();
 
+                //Code that was needed during development but should no longer be:
+                //The population should very rarely have identical chromosomes. The more of that you can eliminate, the less time you waste, and the more you can explore the possibility space
+                //if (population.Select(p => p.score).Distinct().Count() < population.Count - 2)
+                //{
+                //    var makeups = population.ToLookup(p => p.score, p => p.ToString());
+                //    System.Diagnostics.Debugger.Break();
+                //}
+
                 lock (winnerLock)
                 {
                     if (winner == null || winner.score != population[0].score)
                     {
                         winner = population[0];
                         winnerChanged = true;
+                        lastImprovement = generation;
                     }
                 }
 
-                if (generation < targetGenerations - 1) population = BreedNewPopulation(population, 8, 100, 1, targetFoodUnits);
+                if (generation < targetGenerations - 1)
+                {
+                    //Adjust mutation probability and survival rate based on how many generations it's been since an improvement was found
+                    var mutationChance = Math.Min(800, (generation - lastImprovement) / 10 + 30); //3% up to 80%
+                    var survivors = (generation - lastImprovement > 500) ? populationSize / 2 : populationSize / 6; //1/6 normally, 1/2 when improvements are less common
+                    //Even with the genetic algorithm, sometimes wiping out the whole generation except the winner has a very positive effect. Indeed, genocide helps here.
+                    if (generation - lastImprovement > 800 && 
+                        (generation & 63) == 0) //Don't do it every single generation, though--give those poor newbie chromosomes a fighting chance
+                    {
+                        population = GeneratePopulation(populationSize - 1, nutrientsByChromosomeIndex.Length, targetFoodUnits, rnd); //Fresh meat!
+                        population.Add(winner);
+                    }
+                    else
+                    {
+                        population = BreedNewPopulation(population, survivors, mutationChance, 1, targetFoodUnits, rnd);
+                    }
+                }
             }
 
             //Restore mass of locked foods
@@ -486,9 +513,10 @@ namespace Omlenet
         //I experimented with a greedy approach just once, but it took 36 seconds and did not give an even remotely good result.
         //It might be okay for filling in the final slot, though!
         //In the end, I decided to use this as a rare mutation or when the user increases/decreases the targetFoodUnits.
+        //(This method is unused)
         private Chromosome GenerateGreedyChromosome(int foodCount, int targetFoodUnits)
         {
-            var c = new Chromosome(foodCount, targetFoodUnits);
+            var c = new Chromosome(foodCount, targetFoodUnits, new Random());
             AssignFoodsGreedily(c, targetFoodUnits);
             return c;
         }
@@ -577,13 +605,13 @@ namespace Omlenet
             return c;
         }
 
-        private List<Chromosome> GeneratePopulation(int size, int foodCount, int targetFoodUnits)
+        private List<Chromosome> GeneratePopulation(int size, int foodCount, int targetFoodUnits, Random rnd)
         {
             var ret = new List<Chromosome>();
 
             while (size-- > 0)
             {
-                ret.Add(new Chromosome(foodCount, targetFoodUnits));
+                ret.Add(new Chromosome(foodCount, targetFoodUnits, rnd));
             }
 
             return ret;
@@ -592,25 +620,25 @@ namespace Omlenet
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="oldPopulation"></param>
-        /// <param name="survivalRate">Number of top chromosomes to use for breeding and mutation</param>
+        /// <param name="oldPopulation">Assumed to be already scored and sorted from best to worst</param>
+        /// <param name="survivalRate">Number of top chromosomes to use for breeding and mutation. There's no check for this, but it needs to be at least 2 and at most oldPopulation's size.</param>
         /// <param name="mutationChance">Tenths of a percent chance for mutation</param>
         /// <param name="greedyChance">Tenths of a percent chance for dropping the worst and then adding the best food greedily (an expensive operation)</param>
         /// <returns></returns>
-        private List<Chromosome> BreedNewPopulation(List<Chromosome> oldPopulation, int survivalRate, int mutationChance, int greedyChance, int targetFoodUnits)
+        private List<Chromosome> BreedNewPopulation(List<Chromosome> oldPopulation, int survivalRate, int mutationChance, int greedyChance, int targetFoodUnits, Random rnd)
         {
             var ret = new List<Chromosome>();
-            var rnd = new Random();
 
             greedyChance += mutationChance; //Stack probabilities on top of each other for easier randomization
 
             var nextIndex = 0;
             ret.Add(oldPopulation[0].Clone()); //The fittest one shall always survive
+
             while (ret.Count < oldPopulation.Count)
             {
-                //Reuse the top <survivalRate> chromosomes for breeding and mutating
+                //Reuse the top <survivalRate> chromosomes for breeding and mutating (but they can breed with losers, as we all know)
                 var val = rnd.Next(1000);
-                if (val < mutationChance) ret.Add(new Chromosome(oldPopulation[nextIndex]));
+                if (val < mutationChance) ret.Add(new Chromosome(oldPopulation[nextIndex], rnd));
                 else if (val < greedyChance)
                 {
                     var c = oldPopulation[nextIndex].Clone();
@@ -620,8 +648,9 @@ namespace Omlenet
                 }
                 else
                 {
-                    var alterIndex = rnd.Next(survivalRate);
-                    ret.Add(new Chromosome(oldPopulation[nextIndex], oldPopulation[alterIndex], targetFoodUnits));
+                    //Involve the losers in the cross-breeding simply because I'm getting way too many duplicates in most generations with my 831 food options x 85 target count
+                    var alterIndex = rnd.Next(oldPopulation.Count);
+                    ret.Add(new Chromosome(oldPopulation[nextIndex], oldPopulation[alterIndex], targetFoodUnits, rnd));
                 }
 
                 nextIndex = (nextIndex + 1) % survivalRate;

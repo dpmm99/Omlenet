@@ -23,8 +23,10 @@ namespace Omlenet
         private List<ResultListItem> winnerNutrients = null;
         private bool winnerChanged = true; //To save a tiny amount of time when the UI requests the winner's info again
 
+        private Scorer scorer;
+
         private FoodNutrient[][] nutrientsByChromosomeIndex;
-        private Dictionary<int, List<FoodNutrient>> nutrientsByFoodId;
+        private Dictionary<int, FoodNutrient[]> nutrientsByFoodId;
         private List<FoodDescription> foodDescs;
         private List<Nutrient> nutrients;
         private List<NutrientTarget> targets;
@@ -37,7 +39,7 @@ namespace Omlenet
         public bool executed;
         public bool HasWinner { get { return winner != null; } }
 
-        public GASolver(List<FoodDescription> foodDescs, List<NutrientTarget> targets, List<Nutrient> nutrients, Dictionary<int, List<FoodNutrient>> foodNutrientsDict, HashSet<int> lockedFoods, int targetFoodUnits, int targetGenerations = 750000, int populationSize = 48)
+        public GASolver(List<FoodDescription> foodDescs, List<NutrientTarget> targets, List<Nutrient> nutrients, Dictionary<int, FoodNutrient[]> foodNutrientsDict, HashSet<int> lockedFoods, int targetFoodUnits, int targetGenerations = 750000, int populationSize = 48)
         {
             this.nutrientsByFoodId = foodNutrientsDict;
             this.foodDescs = foodDescs.ToList();
@@ -83,44 +85,36 @@ namespace Omlenet
             if (!HasWinner && c == null) return 0;
             else if (c == null) c = winner;
 
-            var scoreSpace = new float[lockedFoodNutrients.Length];
-            var tempFoodNutrients = new float[lockedFoodNutrients.Length];
-            Array.Copy(lockedFoodNutrients, tempFoodNutrients, lockedFoodNutrients.Length);
-
-            var scoreWith = scoreChromosome(c, ref scoreSpace, lockedFoodNutrients);
-            tempFoodNutrients[nutrientId] -= nutrientAmount;
-            var scoreWithout = scoreChromosome(c, ref scoreSpace, tempFoodNutrients);
-
-            return scoreWith - scoreWithout;
+            var scoreSpace = (float[])null;
+            return scorer.ScoreDifference(c, new FoodNutrient[] { new FoodNutrient { nutrientId = nutrientId, nutrientAmount = nutrientAmount } }, ref scoreSpace);
         }
 
-        public float CalculateFoodCostDifference(int foodId, int foodCount, Chromosome c = null) //TODO: I didn't use foodCount? Looks like I assumed you always want to know the current count vs. without it
+        public float CalculateFoodCostDifference(int foodId, ref float[] scoreSpace, Chromosome c = null)
         {
             if (!HasWinner && c == null) return 0;
             else if (c == null) c = winner;
 
-            //TODO: Need a results DataGridView in place of the FoodList ListView, with food ID, mass, food name, and contribution to score.
-            float[] scoreSpace = null;
-            var scoreWith = scoreChromosome(c, ref scoreSpace, lockedFoodNutrients);
-            var withoutFood = c.Clone();
             var index = foodDescs.FindIndex(p => p.id == foodId);
-            
-            //If it's locked, you can't just modify the chromosome; subtract that food's nutrients from a copy of lockedFoodNutrients
-            var modifiedLockedFoodNutrients = (float[])lockedFoodNutrients.Clone();
+            int count;
             if (index == -1)
             {
-                foreach (var nutrient in nutrientsByFoodId[foodId])
-                {
-                    modifiedLockedFoodNutrients[nutrient.nutrientId] -= lockedFoodCounts[foodId] * nutrient.nutrientAmount;
-                }
+                count = lockedFoodCounts[foodId];
             }
             else
             {
-                withoutFood.foods[index] = 0;
+                count = c.foods[index];
             }
-            var scoreWithout = scoreChromosome(withoutFood, ref scoreSpace, modifiedLockedFoodNutrients);
 
-            return scoreWith - scoreWithout;
+            var nutrientsToRemove = count == 1 ? nutrientsByFoodId[foodId] : //Minor optimization
+                nutrientsByFoodId[foodId].Select(p => new FoodNutrient { foodId = p.foodId, nutrientId = p.nutrientId, nutrientAmount = p.nutrientAmount * count }).ToArray();
+            return scorer.ScoreDifference(c, nutrientsToRemove, ref scoreSpace);
+        }
+
+        public float CalculateFoodCostDifference(int foodId, int count, ref float[] scoreSpace, Chromosome c)
+        {
+            var nutrientsToRemove = count == 1 ? nutrientsByFoodId[foodId] : //Minor optimization
+                nutrientsByFoodId[foodId].Select(p => new FoodNutrient { foodId = p.foodId, nutrientId = p.nutrientId, nutrientAmount = p.nutrientAmount * count }).ToArray();
+            return scorer.ScoreDifference(c, nutrientsToRemove, ref scoreSpace);
         }
 
         public void Stop()
@@ -224,22 +218,22 @@ namespace Omlenet
                 }
             }
 
-            UpdateLockedNutrientAmounts();
-
             //Prepare foods as a pseudo-dictionary array
             nutrientsByChromosomeIndex = foodDescs.Select(p => nutrientsByFoodId[p.id].ToArray()).ToArray();
+            UpdateLockedNutrientAmounts();
         }
 
         private List<ResultListItem> GenerateChromosomeFoodList(Chromosome c)
         {
             var ret = new List<ResultListItem>();
 
+            var scoreSpace = (float[])null;
             for (var x = 0; x < c.foods.Length; x++)
             {
                 if (c.foods[x] != 0)
                 {
                     var item = foodDescs.First(p => p.id == nutrientsByChromosomeIndex[x][0].foodId);
-                    var cost = CalculateFoodCostDifference(item.id, c.foods[x], c);
+                    var cost = CalculateFoodCostDifference(item.id, ref scoreSpace, c);
                     ret.Add(new ResultListItem { Id = item.id, Name = item.longDesc, Mass = c.foods[x] * 100, Cost = (float)Math.Round(cost, 1) });
                 }
             }
@@ -248,7 +242,7 @@ namespace Omlenet
             foreach (var item in lockedFoodDescs)
             {
                 var count = lockedFoodCounts[item.id];
-                var cost = CalculateFoodCostDifference(item.id, count, c);
+                var cost = CalculateFoodCostDifference(item.id, ref scoreSpace, c);
                 ret.Add(new ResultListItem { Id = item.id, Name = item.longDesc, Mass = count * 100, Cost = (float)Math.Round(cost, 1) });
             }
 
@@ -260,7 +254,7 @@ namespace Omlenet
             var ret = new List<ResultListItem>();
 
             float[] scoringSpace = null;
-            var tempScore = scoreChromosome(c, ref scoringSpace, lockedFoodNutrients); //Assumes lockedFoodNutrients was calculated //TODO: Test
+            var tempScore = scorer.Score(c, ref scoringSpace);
 
             for (var x = 0; x < scoringSpace.Length; x++)
             {
@@ -280,10 +274,10 @@ namespace Omlenet
         {
             sb.AppendLine("(" + nutrientsByFoodId[food.id][0].foodId + ") " + food.longDesc);
             sb.AppendLine("    " + (count * 100) + "g");
-            for (var y = 0; y < nutrientsByFoodId[food.id].Count; y++)
+            for (var y = 0; y < nutrientsByFoodId[food.id].Length; y++)
             {
                 var nutrient = nutrients.First(p => p.id == nutrientsByFoodId[food.id][y].nutrientId);
-                var range = targets.FirstOrDefault(p => p.nutrientId == nutrient.id);
+                var range = scorer.Targets.FirstOrDefault(p => p.nutrientId == nutrient.id);
                 var trueNutrientAmount = count * nutrientsByFoodId[food.id][y].nutrientAmount;
                 var percent = range != null && range.target != 0 ? " (" + Math.Round(trueNutrientAmount * 700 / range.target, 1) + "% DV)" : "";
                 sb.AppendLine("    " + nutrient.name + ": " + trueNutrientAmount + nutrient.unitOfMeasure + percent);
@@ -309,7 +303,7 @@ namespace Omlenet
             var testOutput = new StringBuilder();
             //testOutput.AppendLine("Score: " + Math.Round(100000 / (1000 + c.score), 1) + " / 100");
             var scoringSpace = (float[])null;
-            if (c.score == 0) c.score = scoreChromosome(c, ref scoringSpace, lockedFoodNutrients); //We don't want to display 0 pointlessly
+            if (c.score == 0) c.score = scorer.Score(c, ref scoringSpace); //We don't want to display 0 pointlessly
             testOutput.AppendLine("Cost: " + Math.Round(c.score));
 
             var nutrientTotals = new List<Tuple<ushort, float, string>>();
@@ -332,14 +326,14 @@ namespace Omlenet
             testOutput.AppendLine("Nutrient Totals:");
             for (var x = 0; x < nutrientTotals.Count; x++)
             {
-                var range = targets.FirstOrDefault(p => p.nutrientId == nutrientTotals[x].Item1);
+                var range = scorer.Targets.FirstOrDefault(p => p.nutrientId == nutrientTotals[x].Item1);
                 var percent = range != null && range.target != 0 ? " (" + Math.Round(nutrientTotals[x].Item2 * 100 / range.target, 1) + "%) " : " ";
                 testOutput.AppendLine(nutrientTotals[x].Item2 + percent + nutrientTotals[x].Item3);
             }
             return testOutput.ToString();
         }
 
-        private void UpdateLockedNutrientAmounts() //TODO: It's sufficient for this to happen only before running the GA and before updating results, but is it slow enough to matter? (being called in SetFood)
+        private void UpdateLockedNutrientAmounts()
         {
             //Generate lockedFoodNutrients from lockedFoodCounts
             lockedFoodNutrients = new float[nutrients.Max(p => p.id) + 1]; //Hopefully no nutrient has a very big ID
@@ -350,6 +344,7 @@ namespace Omlenet
                     lockedFoodNutrients[nutrient.nutrientId] += nutrient.nutrientAmount * kv.Value;
                 }
             }
+            scorer = new Scorer(targets, 7, lockedFoodNutrients, nutrients, nutrientsByChromosomeIndex);
         }
 
         //For use when loading a file
@@ -453,7 +448,7 @@ namespace Omlenet
 #endif
                 {
                     if (population[x].score == 0) //Don't rescore needlessly (unless maybe there's an absolutely perfect chromosome somehow)
-                        population[x].score = scoreChromosome(population[x], ref scoringSpace, lockedFoodNutrients);
+                        population[x].score = scorer.Score(population[x], ref scoringSpace);
 #if PARALLEL
                     return null;
                 }
@@ -503,11 +498,6 @@ namespace Omlenet
 
             //Restore mass of locked foods
             targetFoodUnits += lockedFoodCounts.Sum(p => p.Value);
-
-            //TODO: remap the data in a way that is optimized for getting a food from a nutrient (when one is lacking)
-            //Maybe a dictionary of lists, where the key is the nutrient ID and the list is sorted by amount of that nutrient in the food.
-            //Then you can binary search the list for the exact amount if needed. This might be useful when the week's plan is almost full.
-            //It might also be useful if certain nutrients are found to be very difficult to obtain.
         }
 
         //I experimented with a greedy approach just once, but it took 36 seconds and did not give an even remotely good result.
@@ -521,7 +511,6 @@ namespace Omlenet
             return c;
         }
 
-#if PARALLEL
         private class AssignFoodsGreedily_ThreadCache
         {
             public Chromosome c;
@@ -529,7 +518,6 @@ namespace Omlenet
             public int bestIndex;
             public float bestScore;
         }
-#endif
 
         /// <summary>
         /// Add or remove the specified number of units of food.
@@ -544,9 +532,17 @@ namespace Omlenet
                 var bestIndex = 0;
                 float bestScore = 1000000;
 
-#if PARALLEL
+                var oldNutrients = (float[])null;
+                var oldScore = scorer.Score(c, ref oldNutrients);
+
                 //TODO: If I just assign each of these to a thread instead of using concurrent stacks, it'd probably be notably faster, as it wouldn't need locking and I could control the partitions more simply.
-                var cacheSet = new ConcurrentStack<AssignFoodsGreedily_ThreadCache>(Enumerable.Range(0, Environment.ProcessorCount)
+                var cacheSet = new ConcurrentStack<AssignFoodsGreedily_ThreadCache>(Enumerable.Range(0,
+#if PARALLEL
+                    Environment.ProcessorCount
+#else
+                    1
+#endif
+                    )
                     .Select(p => new AssignFoodsGreedily_ThreadCache { c = c.Clone(), bestIndex = 0, bestScore = 1000000 }));
                 var enumerable = Enumerable.Range(0, c.foods.Length);
                 if (direction < 0) enumerable = enumerable.Where(p => c.foods[p] > 0); //Can't subtract from 0 units
@@ -556,15 +552,12 @@ namespace Omlenet
                         while (!cacheSet.TryPop(out cache)); //Hopefully should never return false because we have at least as many clones as we have threads
                         return cache;
                     }, (idx, q, cache) => {
-                        //Modify, score, and reset clone
-                        cache.c.foods[idx] += direction;
-                        var tempScore = scoreChromosome(cache.c, ref cache.scoringSpace, lockedFoodNutrients);
+                        var tempScore = scorer.ScoreDifference(oldScore, oldNutrients, nutrientsByChromosomeIndex[idx], direction, ref cache.scoringSpace);
                         if (tempScore < cache.bestScore)
                         {
                             cache.bestScore = tempScore;
                             cache.bestIndex = idx;
                         }
-                        cache.c.foods[idx] -= direction;
                         return cache;
                     }, cache => {
                         cacheSet.Push(cache); //Relinquish this cache
@@ -581,25 +574,9 @@ namespace Omlenet
                         bestIndex = subresult.bestIndex;
                     }
                 }
-#else
-                var scoringSpace = (float[])null;
-                for (int x = 0; x < c.foods.Length; x++)
-                {
-                    if (direction < 0 && c.foods[x] == 0) //Can't subtract from 0 units
-                        continue;
-                    c.foods[x] += direction;
-                    c.score = scoreChromosome(c, ref scoringSpace, lockedFoodNutrients);
-                    if (tempScore < bestScore)
-                    {
-                        bestScore = tempScore;
-                        bestIndex = x;
-                    }
-                    c.foods[x] -= direction;
-                }
-#endif
 
                 c.foods[bestIndex] += direction; //Permanently modify the chromosome
-                c.score = bestScore; //Remember the score it ended up with instead of rescoring it unnecessarily next time
+                //c.score = bestScore; //Remember the score it ended up with instead of rescoring it unnecessarily next time
                 targetFoodUnits -= direction; //Decrease the amount of greedy assignments/removals that we have left to do
             }
             return c;
@@ -628,6 +605,7 @@ namespace Omlenet
         private List<Chromosome> BreedNewPopulation(List<Chromosome> oldPopulation, int survivalRate, int mutationChance, int greedyChance, int targetFoodUnits, Random rnd)
         {
             var ret = new List<Chromosome>();
+            //Note: If I wanted to go crazy with reducing garbage collections, I could alternate between two lists and generate the new generation's chromosomes in-place instead of constructing new ones
 
             greedyChance += mutationChance; //Stack probabilities on top of each other for easier randomization
 
@@ -720,61 +698,8 @@ namespace Omlenet
 
         public void UpdateTargets(List<NutrientTarget> targets)
         {
-            this.targets = targets.Select(p => p.Clone()).ToList();
-
-            //Targets are saved as daily values, so we'll multiply by 7 here to get weekly values
-            foreach (var range in this.targets)
-            {
-                range.min *= 7;
-                range.max *= 7;
-                range.target *= 7;
-                range.costOver /= 7;
-                range.costUnder /= 7;
-                if (range.min <= 0) range.min = -0.1f; //To avoid machine epsilon when calculating nutrient cost differences without slowing down scoring itself
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="c"></param>
-        /// <param name="nutrientAmounts">Per-thread preallocated scoring space, to avoid the cost of allocating and garbage collecting for every scoring</param>
-        /// <returns></returns>
-        private float scoreChromosome(Chromosome c, ref float[] nutrientAmounts, float[] extraNutrientAmounts)
-        {
-            if (nutrientAmounts == null) nutrientAmounts = new float[nutrients.Count];
-            Array.Copy(extraNutrientAmounts, nutrientAmounts, extraNutrientAmounts.Length);
-
-            for (int x = c.foods.Length - 1; x >= 0; x--)
-            {
-                if (c.foods[x] != 0)
-                {
-                    for (int y = nutrientsByChromosomeIndex[x].Length - 1; y >= 0; y--)
-                    {
-                        nutrientAmounts[nutrientsByChromosomeIndex[x][y].nutrientId] += nutrientsByChromosomeIndex[x][y].nutrientAmount * c.foods[x];
-                    }
-                }
-            }
-            return score(nutrientAmounts);
-        }
-
-        /// <summary>
-        /// Calculate an inverse score based on the given ranges (should already be filtered by body type). (Higher is worse.)
-        /// </summary>
-        /// <param name="foodNutrients"></param>
-        /// <param name="ranges"></param>
-        /// <returns></returns>
-        private float score(float[] foodNutrients)
-        {
-            float sum = 0;
-            foreach (var target in targets)
-            {
-                var total = foodNutrients[target.nutrientId];
-                if (total < target.min || total > target.max) sum += 1000; //Exceeding the limits is a huge cost
-                if (total < target.target) sum += (target.target - total) * target.costUnder; //Cost per unit differs for over or under target
-                else if (total > target.target) sum += (total - target.target) * target.costOver;
-            }
-            return sum;
+            this.targets = targets;
+            scorer = new Scorer(targets, 7, lockedFoodNutrients, nutrients, nutrientsByChromosomeIndex);
         }
     }
 }

@@ -14,7 +14,7 @@ namespace Omlenet
         public static string programTitle;
         public static GASolver solver;
         public static List<FoodNutrient> foodNutrients;
-        public static Dictionary<int, List<FoodNutrient>> foodNutrientDict;
+        public static Dictionary<int, FoodNutrient[]> foodNutrientDict;
         public static List<FoodGroup> foodGroups;
         public static List<FoodDescription> foodDescs;
         public static HashSet<int> foodEnabled;
@@ -222,18 +222,22 @@ namespace Omlenet
 
         private static void GenerateNutrientDictionary()
         {
-            foodNutrientDict = new Dictionary<int, List<FoodNutrient>>(10000);
-            var lastList = (List<FoodNutrient>)null;
+            foodNutrientDict = new Dictionary<int, FoodNutrient[]>(10000);
+            var lastList = new List<FoodNutrient>(150);
             var lastFoodId = -1;
             //Basically if GroupBy assumed the IEnumerable is already grouped, this would be equivalent to foodNutrients.GroupBy(p => p.foodId).ToDictionary()
             for (var x = 0; x < foodNutrients.Count; x++)
             {
                 if (foodNutrients[x].foodId != lastFoodId)
                 {
-                    foodNutrientDict.Add(lastFoodId = foodNutrients[x].foodId, lastList = new List<FoodNutrient>());
+                    if (lastFoodId != -1) foodNutrientDict.Add(lastFoodId, lastList.ToArray());
+
+                    lastList.Clear();
+                    lastFoodId = foodNutrients[x].foodId;
                 }
                 lastList.Add(foodNutrients[x]);
             }
+            if (lastFoodId != -1) foodNutrientDict.Add(lastFoodId, lastList.ToArray());
         }
 
     }

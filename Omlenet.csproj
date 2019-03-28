@@ -58,6 +58,7 @@
     <Compile Include="DataGridViewContextMenu.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="FoodAmount.cs" />
     <Compile Include="Forms\AboutBox1.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -104,6 +105,7 @@
       <DependentUpon>TargetsPanel.cs</DependentUpon>
     </Compile>
     <Compile Include="ResultListItem.cs" />
+    <Compile Include="Scorer.cs" />
     <Compile Include="USDAFormat.cs" />
     <EmbeddedResource Include="Forms\AboutBox1.resx">
       <DependentUpon>AboutBox1.cs</DependentUpon>

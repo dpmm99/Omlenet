@@ -21,6 +21,7 @@ namespace Omlenet
         private FiltersPanel filtersPanel;
         private DetailsPanel detailsPanel;
         private ResultsPanel resultsPanel;
+        private Calculator calculatorPanel;
 
         private List<string> bodyTypes = new List<string> { "Male 19-30" };
 
@@ -61,15 +62,39 @@ namespace Omlenet
                 filtersPanel.CloseButtonVisible = false;
                 filtersPanel.IsHidden = false;
                 filtersPanel.Show(dockPanel1, DockState.Document);
-                filtersPanel.UpdateDetails = detailsPanel.DisplayFood; //Allow the details panel to react when you select a food in the filters panel
+                filtersPanel.UpdateDetails = p =>
+                {
+                    detailsPanel.DisplayFood(p); //Allow the details panel to react when you select a food in the filters panel
+                    calculatorPanel.OnFoodSelectionChanged(p); //Same for the calculator panel
+                };
                 filtersPanel.FormClosing += onClosingHide;
+
+                calculatorPanel = new Calculator();
+                calculatorPanel.CloseButtonVisible = false;
+                calculatorPanel.IsHidden = true;
+                calculatorPanel.Show(dockPanel1, DockState.DockRight);
+                calculatorPanel.DisplayFood = p =>
+                {
+                    detailsPanel.DisplayFood(p); //Allow the details panel to react when you select a food in the calculator panel, too
+                    calculatorPanel.OnFoodSelectionChanged(p); //And update the selection for the calculator panel's NUDs
+                };
+                calculatorPanel.DisplayNutrient = detailsPanel.DisplayNutrient; //Also let it react when you select a nutrient
+                calculatorPanel.FormClosing += onClosingHide;
 
                 resultsPanel = new ResultsPanel();
                 resultsPanel.CloseButtonVisible = false;
                 resultsPanel.IsHidden = false;
                 resultsPanel.Show(dockPanel1, DockState.DockRight);
-                resultsPanel.DisplayFood = detailsPanel.DisplayFood; //Allow the details panel to react when you select a food in the results panel, too
-                resultsPanel.DisplayNutrient = detailsPanel.DisplayNutrient; //Also let it react when you select a nutrient
+                resultsPanel.DisplayFood = p =>
+                {
+                    detailsPanel.DisplayFood(p); //Allow the details panel to react when you select a food in the results panel, too
+                    calculatorPanel.OnFoodSelectionChanged(p); //Same for the calculator panel
+                };
+                resultsPanel.DisplayNutrient = p =>
+                {
+                    detailsPanel.DisplayNutrient(p); //Also let it react when you select a nutrient
+                    calculatorPanel.OnFoodSelectionChanged(-1); //Calculator panel needs to know you don't have a food selected anymore
+                };
                 resultsPanel.FormClosing += onClosingHide;
                 resultsPanel.OnStop = () =>
                 {
@@ -127,6 +152,7 @@ namespace Omlenet
         {
             if (solver != null) solver.Stop();
 
+            saveFileDialog1.Filter = "Omlenet Solver files (*.omn)|*.omn|All files(*.*)|*.*";
             var res = saveFileDialog1.ShowDialog();
             if (res == DialogResult.OK)
             {
@@ -150,21 +176,51 @@ namespace Omlenet
                 progressBar1.Value = 50; //Pretend progress
                 progressBar1.Visible = true;
                 Application.DoEvents();
-                using (var br = new BinaryReader(File.Open(openFileDialog1.FileName, FileMode.Open, FileAccess.Read))) DeserializeInstance(br);
+                using (var br = new BinaryReader(File.Open(openFileDialog1.FileName, FileMode.Open, FileAccess.Read)))
+                {
+                    var ext = Path.GetExtension(openFileDialog1.FileName).ToLower();
+                    if (ext == ".omn") //TODO: Use the Magic Number instead of the extension, like a true nerd
+                    {
+                        DeserializeInstance(br);
+
+                        //Apply loaded data to UI
+                        filtersPanel.FilterNow();
+                        targetsPanel.bodyType = bodyType;
+                        targetsPanel.foodMass = targetFoodUnits;
+                        UpdateWinner();
+
+                        if (solver.executed) solverState = SolverState.Completed;
+                        else solverState = SolverState.Ready;
+                        resultsPanel.UpdateUI();
+                        targetsPanel.LoadData(nutrients, targets, targetOverrides, bodyTypes);
+                    }
+                    else if (ext == ".omc")
+                    {
+                        calculatorPanel.Deserialize(br); //Let the Calculator panel deal with Omlenet Calculator files
+                    }
+                    else
+                    {
+                        MessageBox.Show(this, "Please select an Omlenet file.", "Omlenet", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
                 progressBar1.Visible = false;
-
-                //Apply loaded data to UI
-                filtersPanel.FilterNow();
-                targetsPanel.bodyType = bodyType;
-                targetsPanel.foodMass = targetFoodUnits;
-                UpdateWinner();
-
-                if (solver.executed) solverState = SolverState.Completed;
-                else solverState = SolverState.Ready;
-                resultsPanel.UpdateUI();
-                targetsPanel.LoadData(nutrients, targets, targetOverrides, bodyTypes);
             }
         }
+
+        private void saveCalculatorAsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            saveFileDialog1.Filter = "Omlenet Calculator files (*.omc)|*.omc|All files(*.*)|*.*";
+            var res = saveFileDialog1.ShowDialog();
+            if (res == DialogResult.OK)
+            {
+                progressBar1.Value = 50; //Pretend progress
+                progressBar1.Visible = true;
+                Application.DoEvents();
+                using (var bw = new BinaryWriter(File.Open(saveFileDialog1.FileName, FileMode.Create, FileAccess.Write))) calculatorPanel.Serialize(bw);
+                progressBar1.Visible = false;
+            }
+        }
+
 
         private void increaseLoadingProgress(int lineCount, int expectedLineCount)
         {
@@ -186,11 +242,12 @@ namespace Omlenet
             resultsPanel.Enabled = true;
             targetsPanel.Enabled = true;
             filtersPanel.Enabled = true;
+            calculatorPanel.Enabled = true;
             viewRarestNutrientsToolStripMenuItem.Enabled = true;
             viewTopFoodsForSelectedNutrientToolStripMenuItem.Enabled = true;
             openToolStripMenuItem.Enabled = true;
             saveAsToolStripMenuItem.Enabled = true;
-
+            saveCalculatorAsToolStripMenuItem.Enabled = true;
 
             filtersPanel.Ready();
 
@@ -283,5 +340,6 @@ namespace Omlenet
             resultsPanel.ResultText = "Top sources of " + nutrient.name + " in " + nutrient.unitOfMeasure + " per 100g): " + Environment.NewLine + 
                 String.Join(Environment.NewLine, topItems);
         }
+
     }
 }

@@ -1,0 +1,11 @@
+I'd like to see tags on foods instead of having a 'category' dropdown: 
+[existing categories]
+red meat
+processed meat
+animal product (for the vegans out there)
+uncommon (because meal plans should be realistic)
+expensive
+normally not consumed in large quantities (who's going to eat 100g of dried parsley?)
+short expiration (<5 days)
+long expiration (>3 weeks)
+refrigeration required

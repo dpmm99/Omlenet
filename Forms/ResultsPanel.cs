@@ -14,11 +14,17 @@ namespace Omlenet
 {
     public partial class ResultsPanel : DockContent
     {
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Action OnStop;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Action OnStart;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Action OnContinue;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Action OnReset;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Action<int> DisplayFood; //Passes in a food ID
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Action<ushort> DisplayNutrient; //Passes in a nutrient ID
 
         public void UpdateUI()
@@ -40,9 +46,10 @@ namespace Omlenet
             InitializeComponent();
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string ResultText { get { return plainTextResults.Text; } set { plainTextResults.Text = value; } }
 
-        private static List<ResultListItem> DgvRowsToResultListItemList(DataGridViewRowCollection items)
+        protected static List<ResultListItem> DgvRowsToResultListItemList(DataGridViewRowCollection items)
         {
             var ret = new List<ResultListItem>(items.Count);
             foreach (var item in items)
@@ -57,7 +64,7 @@ namespace Omlenet
             return ret;
         }
 
-        private void UpdateResultListDGV(DataGridView dgv, List<ResultListItem> value)
+        protected void UpdateResultListDGV(DataGridView dgv, List<ResultListItem> value)
         {
             var oldScroll = dgv.FirstDisplayedScrollingRowIndex;
             dgv.Rows.Clear();
@@ -76,12 +83,14 @@ namespace Omlenet
             if (oldScroll < dgv.RowCount && oldScroll > -1) dgv.FirstDisplayedScrollingRowIndex = oldScroll;
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public List<ResultListItem> FoodList
         {
             get { return DgvRowsToResultListItemList(dgvFoods.Rows); }
             set { UpdateResultListDGV(dgvFoods, value); }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public List<ResultListItem> NutrientList
         {
             get { return DgvRowsToResultListItemList(dgvNutrients.Rows); }
@@ -107,7 +116,7 @@ namespace Omlenet
             }
         }
 
-        private void ResultsPanel_Resize(object sender, EventArgs e)
+        protected void ResultsPanel_Resize(object sender, EventArgs e)
         {
             tabControl1.Height = this.ClientSize.Height - btnBeginSearch.Height - 3;
         }
@@ -117,6 +126,7 @@ namespace Omlenet
 
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         string contextMenuTargetText = "";
         private void copyToolStripMenuItem_Click(object sender, EventArgs e)
         {

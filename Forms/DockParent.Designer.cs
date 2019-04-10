@@ -34,6 +34,7 @@
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveCalculatorAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -77,6 +78,7 @@
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.openToolStripMenuItem,
             this.saveAsToolStripMenuItem,
+            this.saveCalculatorAsToolStripMenuItem,
             this.toolStripMenuItem1,
             this.exitToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
@@ -88,7 +90,7 @@
             this.openToolStripMenuItem.Enabled = false;
             this.openToolStripMenuItem.Name = "openToolStripMenuItem";
             this.openToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
-            this.openToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.openToolStripMenuItem.Size = new System.Drawing.Size(199, 22);
             this.openToolStripMenuItem.Text = "&Open";
             this.openToolStripMenuItem.Click += new System.EventHandler(this.openToolStripMenuItem_Click);
             // 
@@ -97,20 +99,29 @@
             this.saveAsToolStripMenuItem.Enabled = false;
             this.saveAsToolStripMenuItem.Name = "saveAsToolStripMenuItem";
             this.saveAsToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
-            this.saveAsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.saveAsToolStripMenuItem.Size = new System.Drawing.Size(199, 22);
             this.saveAsToolStripMenuItem.Text = "&Save As";
             this.saveAsToolStripMenuItem.Click += new System.EventHandler(this.saveAsToolStripMenuItem_Click);
+            // 
+            // saveCalculatorAsToolStripMenuItem
+            // 
+            this.saveCalculatorAsToolStripMenuItem.Enabled = false;
+            this.saveCalculatorAsToolStripMenuItem.Name = "saveCalculatorAsToolStripMenuItem";
+            this.saveCalculatorAsToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.C)));
+            this.saveCalculatorAsToolStripMenuItem.Size = new System.Drawing.Size(199, 22);
+            this.saveCalculatorAsToolStripMenuItem.Text = "Save &Calculator As";
+            this.saveCalculatorAsToolStripMenuItem.Click += new System.EventHandler(this.saveCalculatorAsToolStripMenuItem_Click);
             // 
             // toolStripMenuItem1
             // 
             this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(177, 6);
+            this.toolStripMenuItem1.Size = new System.Drawing.Size(196, 6);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
             this.exitToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F4)));
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(199, 22);
             this.exitToolStripMenuItem.Text = "E&xit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
@@ -160,12 +171,13 @@
             // 
             // saveFileDialog1
             // 
-            this.saveFileDialog1.Filter = "Omlenet files (*.omn)|*.omn|All files(*.*)|*.*";
+            this.saveFileDialog1.Filter = "All files(*.*)|*.*";
             // 
             // openFileDialog1
             // 
             this.openFileDialog1.DefaultExt = "omn";
-            this.openFileDialog1.Filter = "Omlenet files (*.omn)|*.omn|All files(*.*)|*.*";
+            this.openFileDialog1.Filter = "All Omlenet files (*.omn;*.omc)|*.omn;*.omc|Omlenet Solver files (*.omn)|*.omn|Om" +
+    "lenet Calculator files (*.omc)|*.omc|All files(*.*)|*.*";
             // 
             // statusStrip1
             // 
@@ -179,6 +191,7 @@
             // 
             // progressBar1
             // 
+            this.progressBar1.AutoSize = false;
             this.progressBar1.Name = "progressBar1";
             this.progressBar1.Overflow = System.Windows.Forms.ToolStripItemOverflow.Never;
             this.progressBar1.Size = new System.Drawing.Size(775, 16);
@@ -195,6 +208,7 @@
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "DockParent";
             this.Text = "Omlenet";
+            this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.DockParent_FormClosing);
             this.Load += new System.EventHandler(this.DockParent_Load);
             this.Resize += new System.EventHandler(this.DockParent_Resize);
@@ -226,5 +240,6 @@
         private System.Windows.Forms.ToolStripMenuItem viewRarestNutrientsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem viewTopFoodsForSelectedNutrientToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem saveCalculatorAsToolStripMenuItem;
     }
 }

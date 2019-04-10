@@ -57,12 +57,17 @@ namespace Omlenet
                 scoreSpace[change.nutrientId] -= change.nutrientAmount;
             }
 
-            var scoreWithout = score(scoreSpace);
+            var scoreWithout = Score(scoreSpace);
             return scoreWith - scoreWithout;
         }
         //TODO: Make sure these accept the optimally efficient inputs. (Maybe you should accept a count in the above, for example)
 
-        //Expects oldNutrients to be the nutrientAmounts reference from a previous call to Score(Chromosome c, ref float[] nutrientAmounts)
+        /// <param name="oldScore">Score before making the change</param>
+        /// <param name="oldNutrients">nutrientAmounts reference from a previous call to Score(Chromosome c, ref float[] nutrientAmounts)</param>
+        /// <param name="changes">Nutrients to change</param>
+        /// <param name="amount">Amount to multiply changes by (note that the database lists nutrient amounts per 100g of each food)</param>
+        /// <param name="scoreSpace">Array to be used for scoring (so we don't have to allocate a new one on every call)</param>
+        /// <returns>Old score minus the score after the given hypothetical changes</returns>
         public float ScoreDifference(float oldScore, float[] oldNutrients, FoodNutrient[] changes, float amount, ref float[] scoreSpace)
         {
             if (scoreSpace == null) scoreSpace = new float[nutrientArraySize];
@@ -74,7 +79,7 @@ namespace Omlenet
                 scoreSpace[change.nutrientId] += change.nutrientAmount * amount;
             }
 
-            var newScore = score(scoreSpace);
+            var newScore = Score(scoreSpace);
             return oldScore - newScore;
         }
 
@@ -99,22 +104,7 @@ namespace Omlenet
                     }
                 }
             }
-            return score(nutrientAmounts);
-        }
-
-        //For the hand-calculator
-        public float Score(List<FoodAmount> foods)
-        {
-            var nutrientAmounts = new float[nutrientArraySize];
-
-            foreach (var food in foods)
-            {
-                foreach (var nut in food.GetNutrients())
-                {
-                    nutrientAmounts[nut.nutrientId] += nut.nutrientAmount * food.amount / 100;
-                }
-            }
-            return score(nutrientAmounts);
+            return Score(nutrientAmounts);
         }
 
         /// <summary>
@@ -123,7 +113,7 @@ namespace Omlenet
         /// <param name="foodNutrients"></param>
         /// <param name="ranges"></param>
         /// <returns></returns>
-        protected float score(float[] foodNutrients)
+        public float Score(float[] foodNutrients)
         {
             float sum = 0;
             foreach (var target in adjustedTargets)

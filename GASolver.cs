@@ -270,6 +270,7 @@ namespace Omlenet
             return ret;
         }
 
+        //TODO: Can I move this and most of the below method into Scorer so I can reuse them for Calculator?
         private void GenerateFoodText(FoodDescription food, int count, StringBuilder sb, List<Tuple<ushort, float, string>> nutrientTotals)
         {
             sb.AppendLine("(" + nutrientsByFoodId[food.id][0].foodId + ") " + food.longDesc);

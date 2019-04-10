@@ -260,6 +260,7 @@
             this.Controls.Add(this.btnReset);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.btnBeginSearch);
+            this.Enabled = false;
             this.Name = "ResultsPanel";
             this.Text = "Results";
             this.Load += new System.EventHandler(this.ResultsPanel_Load);
@@ -278,25 +279,25 @@
 
         #endregion
 
-        private System.Windows.Forms.TextBox plainTextResults;
-        private System.Windows.Forms.Button btnBeginSearch;
-        private System.Windows.Forms.TabControl tabControl1;
-        private System.Windows.Forms.TabPage tabPage1;
-        private System.Windows.Forms.TabPage tabPage2;
-        private System.Windows.Forms.ContextMenuStrip ctmReadOnlyTextMenu;
-        private System.Windows.Forms.ToolStripMenuItem copyToolStripMenuItem;
-        private System.Windows.Forms.TabPage tabPage3;
-        private System.Windows.Forms.DataGridView dgvNutrients;
-        private System.Windows.Forms.DataGridViewTextBoxColumn ID;
-        private System.Windows.Forms.DataGridViewTextBoxColumn NName;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Mass;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Cost;
-        private DataGridViewContextMenu ctmDgvCopyMenu;
-        private System.Windows.Forms.DataGridView dgvFoods;
-        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn1;
-        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn2;
-        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn3;
-        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn4;
-        private System.Windows.Forms.Button btnReset;
+        protected System.Windows.Forms.TextBox plainTextResults;
+        protected System.Windows.Forms.Button btnBeginSearch;
+        protected System.Windows.Forms.TabControl tabControl1;
+        protected System.Windows.Forms.TabPage tabPage1;
+        protected System.Windows.Forms.TabPage tabPage2;
+        protected System.Windows.Forms.ContextMenuStrip ctmReadOnlyTextMenu;
+        protected System.Windows.Forms.ToolStripMenuItem copyToolStripMenuItem;
+        protected System.Windows.Forms.TabPage tabPage3;
+        protected System.Windows.Forms.DataGridView dgvNutrients;
+        protected System.Windows.Forms.DataGridViewTextBoxColumn ID;
+        protected System.Windows.Forms.DataGridViewTextBoxColumn NName;
+        protected System.Windows.Forms.DataGridViewTextBoxColumn Mass;
+        protected System.Windows.Forms.DataGridViewTextBoxColumn Cost;
+        protected DataGridViewContextMenu ctmDgvCopyMenu;
+        protected System.Windows.Forms.DataGridView dgvFoods;
+        protected System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn1;
+        protected System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn2;
+        protected System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn3;
+        protected System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn4;
+        protected System.Windows.Forms.Button btnReset;
     }
 }
